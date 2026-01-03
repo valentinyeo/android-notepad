@@ -35,8 +35,6 @@ import androidx.compose.ui.text.style.TextOverflow
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopMenuBar(
-    fileName: String,
-    isModified: Boolean,
     textFieldValue: TextFieldValue,
     canUndo: Boolean,
     canRedo: Boolean,
@@ -155,11 +153,9 @@ fun TopMenuBar(
         },
         title = {
             Text(
-                text = (if (isModified) "• " else "") + fileName,
+                text = "Notepad",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(

@@ -88,8 +88,6 @@ fun NotepadScreen(
     Scaffold(
         topBar = {
             TopMenuBar(
-                fileName = editorState.fileName,
-                isModified = editorState.isModified,
                 textFieldValue = editorState.textFieldValue,
                 canUndo = viewModel.canUndo(),
                 canRedo = viewModel.canRedo(),
