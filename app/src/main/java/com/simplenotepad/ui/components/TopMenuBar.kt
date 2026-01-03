@@ -1,14 +1,20 @@
 package com.simplenotepad.ui.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.FormatStrikethrough
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -26,11 +32,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,8 +89,8 @@ fun TopMenuBar(
     val clipboardManager = LocalClipboardManager.current
     var showMainMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
-    var showFormatMenu by remember { mutableStateOf(false) }
     var showHeaderMenu by remember { mutableStateOf(false) }
+    var showListMenu by remember { mutableStateOf(false) }
 
     TopAppBar(
         navigationIcon = {
@@ -152,116 +160,151 @@ fun TopMenuBar(
             }
         },
         title = {
-            Text(
-                text = "Notepad",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            // Formatting toolbar
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Header dropdown (H1, H2, etc.)
+                Box {
+                    IconButton(
+                        onClick = { showHeaderMenu = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "H1",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "▾",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = showHeaderMenu,
+                        onDismissRequest = { showHeaderMenu = false }
+                    ) {
+                        (1..6).forEach { level ->
+                            DropdownMenuItem(
+                                text = { Text("H$level") },
+                                onClick = { showHeaderMenu = false; onFormatHeader(level) }
+                            )
+                        }
+                    }
+                }
+
+                // List dropdown
+                Box {
+                    IconButton(
+                        onClick = { showListMenu = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.FormatListBulleted,
+                                contentDescription = "List",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                "▾",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = showListMenu,
+                        onDismissRequest = { showListMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Bullet List") },
+                            onClick = { showListMenu = false; onFormatBulletList() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Numbered List") },
+                            onClick = { showListMenu = false; onFormatNumberedList() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Blockquote") },
+                            onClick = { showListMenu = false; onFormatBlockquote() }
+                        )
+                    }
+                }
+
+                // Bold
+                IconButton(
+                    onClick = onFormatBold,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.FormatBold,
+                        contentDescription = "Bold",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Italic
+                IconButton(
+                    onClick = onFormatItalic,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.FormatItalic,
+                        contentDescription = "Italic",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Link
+                IconButton(
+                    onClick = onFormatLink,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = "Link",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Strikethrough
+                IconButton(
+                    onClick = onFormatStrikethrough,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.FormatStrikethrough,
+                        contentDescription = "Strikethrough",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Code
+                IconButton(
+                    onClick = onFormatInlineCode,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Code,
+                        contentDescription = "Code",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         actions = {
-            // Quick action icons
+            // Undo/Redo
             IconButton(onClick = onUndo, enabled = canUndo) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
             }
             IconButton(onClick = onRedo, enabled = canRedo) {
                 Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
-            }
-            IconButton(onClick = onShowThemeDialog) {
-                Icon(Icons.Default.DarkMode, contentDescription = "Theme")
-            }
-
-            // Format menu (Markdown)
-            Box {
-                IconButton(onClick = { showFormatMenu = true }) {
-                    Icon(Icons.Default.FormatBold, contentDescription = "Format")
-                }
-
-                DropdownMenu(
-                    expanded = showFormatMenu,
-                    onDismissRequest = { showFormatMenu = false; showHeaderMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Bold") },
-                        onClick = { showFormatMenu = false; onFormatBold() },
-                        trailingIcon = { Text("**B**", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Italic") },
-                        onClick = { showFormatMenu = false; onFormatItalic() },
-                        trailingIcon = { Text("*I*", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Strikethrough") },
-                        onClick = { showFormatMenu = false; onFormatStrikethrough() },
-                        trailingIcon = { Text("~~S~~", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    HorizontalDivider()
-                    // Headers submenu
-                    Box {
-                        DropdownMenuItem(
-                            text = { Text("Header") },
-                            onClick = { showHeaderMenu = !showHeaderMenu },
-                            trailingIcon = { Text("▶") }
-                        )
-                        DropdownMenu(
-                            expanded = showHeaderMenu,
-                            onDismissRequest = { showHeaderMenu = false }
-                        ) {
-                            (1..6).forEach { level ->
-                                DropdownMenuItem(
-                                    text = { Text("H$level - ${"#".repeat(level)}") },
-                                    onClick = { showFormatMenu = false; showHeaderMenu = false; onFormatHeader(level) }
-                                )
-                            }
-                        }
-                    }
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("Bullet List") },
-                        onClick = { showFormatMenu = false; onFormatBulletList() },
-                        trailingIcon = { Text("- item", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Numbered List") },
-                        onClick = { showFormatMenu = false; onFormatNumberedList() },
-                        trailingIcon = { Text("1. item", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Blockquote") },
-                        onClick = { showFormatMenu = false; onFormatBlockquote() },
-                        trailingIcon = { Text("> quote", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("Inline Code") },
-                        onClick = { showFormatMenu = false; onFormatInlineCode() },
-                        trailingIcon = { Text("`code`", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Code Block") },
-                        onClick = { showFormatMenu = false; onFormatCodeBlock() },
-                        trailingIcon = { Text("```", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("Link") },
-                        onClick = { showFormatMenu = false; onFormatLink() },
-                        trailingIcon = { Text("[]()", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Image") },
-                        onClick = { showFormatMenu = false; onFormatImage() },
-                        trailingIcon = { Text("![]()", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Horizontal Rule") },
-                        onClick = { showFormatMenu = false; onFormatHorizontalRule() },
-                        trailingIcon = { Text("---", style = MaterialTheme.typography.bodySmall) }
-                    )
-                }
             }
 
             // More menu (View + Help)
@@ -293,6 +336,7 @@ fun TopMenuBar(
                     )
                     HorizontalDivider()
                     DropdownMenuItem(text = { Text("Font...") }, onClick = { showMoreMenu = false; onShowFontDialog() })
+                    DropdownMenuItem(text = { Text("Theme...") }, onClick = { showMoreMenu = false; onShowThemeDialog() })
                     HorizontalDivider()
                     DropdownMenuItem(text = { Text("About") }, onClick = { showMoreMenu = false; onShowAbout() })
                 }
