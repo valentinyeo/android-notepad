@@ -24,6 +24,7 @@ class PreferencesRepository(private val context: Context) {
         val SHOW_STATUS_BAR = booleanPreferencesKey("show_status_bar")
         val RECENT_FILES = stringSetPreferencesKey("recent_files")
         val ZOOM_LEVEL = floatPreferencesKey("zoom_level")
+        val AUTO_SAVE = booleanPreferencesKey("auto_save")
     }
 
     data class AppPreferences(
@@ -32,7 +33,8 @@ class PreferencesRepository(private val context: Context) {
         val fontSize: Float = 14f,
         val showStatusBar: Boolean = true,
         val recentFiles: List<String> = emptyList(),
-        val zoomLevel: Float = 1f
+        val zoomLevel: Float = 1f,
+        val autoSave: Boolean = false
     )
 
     val preferences: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -42,7 +44,8 @@ class PreferencesRepository(private val context: Context) {
             fontSize = prefs[Keys.FONT_SIZE] ?: 14f,
             showStatusBar = prefs[Keys.SHOW_STATUS_BAR] ?: true,
             recentFiles = prefs[Keys.RECENT_FILES]?.toList() ?: emptyList(),
-            zoomLevel = prefs[Keys.ZOOM_LEVEL] ?: 1f
+            zoomLevel = prefs[Keys.ZOOM_LEVEL] ?: 1f,
+            autoSave = prefs[Keys.AUTO_SAVE] ?: false
         )
     }
 
@@ -64,6 +67,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setZoomLevel(level: Float) {
         context.dataStore.edit { it[Keys.ZOOM_LEVEL] = level.coerceIn(0.5f, 3f) }
+    }
+
+    suspend fun setAutoSave(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_SAVE] = enabled }
     }
 
     suspend fun addRecentFile(uri: String) {

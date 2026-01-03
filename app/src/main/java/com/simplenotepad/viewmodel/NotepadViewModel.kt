@@ -8,6 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.simplenotepad.data.PreferencesRepository
 import com.simplenotepad.ui.theme.ThemeMode
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,11 +79,44 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
     private val redoStack = mutableListOf<TextFieldValue>()
     private var lastSavedContent: String = ""
 
+    // Auto-save
+    private var autoSaveJob: Job? = null
+    private val autoSaveIntervalMs = 30_000L // 30 seconds
+
     init {
         viewModelScope.launch {
             val prefs = preferences.first()
             // Initialize with preferences
         }
+
+        // Start auto-save monitoring
+        viewModelScope.launch {
+            preferences.collect { prefs ->
+                if (prefs.autoSave) {
+                    startAutoSave()
+                } else {
+                    stopAutoSave()
+                }
+            }
+        }
+    }
+
+    private fun startAutoSave() {
+        if (autoSaveJob?.isActive == true) return
+        autoSaveJob = viewModelScope.launch {
+            while (true) {
+                delay(autoSaveIntervalMs)
+                val state = _editorState.value
+                if (state.isModified && state.fileUri != null) {
+                    saveFile()
+                }
+            }
+        }
+    }
+
+    private fun stopAutoSave() {
+        autoSaveJob?.cancel()
+        autoSaveJob = null
     }
 
     fun onTextChange(newValue: TextFieldValue) {
@@ -402,6 +437,152 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         onTextChange(TextFieldValue(newText, TextRange(selection.start + dateTime.length)))
     }
 
+    // Markdown formatting helpers
+    fun formatBold() {
+        wrapSelection("**", "**")
+    }
+
+    fun formatItalic() {
+        wrapSelection("*", "*")
+    }
+
+    fun formatStrikethrough() {
+        wrapSelection("~~", "~~")
+    }
+
+    fun formatInlineCode() {
+        wrapSelection("`", "`")
+    }
+
+    fun formatCodeBlock() {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val selectedText = if (selection.collapsed) "" else currentValue.text.substring(selection.min, selection.max)
+
+        val newText = currentValue.text.substring(0, selection.min) +
+                "```\n$selectedText\n```" +
+                currentValue.text.substring(selection.max)
+
+        val newCursorPos = selection.min + 4 // After ```\n
+        onTextChange(TextFieldValue(newText, TextRange(newCursorPos)))
+    }
+
+    fun formatHeader(level: Int) {
+        val prefix = "#".repeat(level.coerceIn(1, 6)) + " "
+        prefixLine(prefix)
+    }
+
+    fun formatBulletList() {
+        prefixSelectedLines("- ")
+    }
+
+    fun formatNumberedList() {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val text = currentValue.text
+
+        // Find start and end of selected lines
+        val lineStart = text.lastIndexOf('\n', selection.min - 1).let { if (it < 0) 0 else it + 1 }
+        val lineEnd = text.indexOf('\n', selection.max).let { if (it < 0) text.length else it }
+
+        val selectedLines = text.substring(lineStart, lineEnd).split('\n')
+        val numberedLines = selectedLines.mapIndexed { index, line ->
+            "${index + 1}. $line"
+        }.joinToString("\n")
+
+        val newText = text.substring(0, lineStart) + numberedLines + text.substring(lineEnd)
+        onTextChange(TextFieldValue(newText, TextRange(lineStart, lineStart + numberedLines.length)))
+    }
+
+    fun formatBlockquote() {
+        prefixSelectedLines("> ")
+    }
+
+    fun formatLink() {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val selectedText = if (selection.collapsed) "link text" else currentValue.text.substring(selection.min, selection.max)
+
+        val linkMarkdown = "[$selectedText](url)"
+        val newText = currentValue.text.substring(0, selection.min) + linkMarkdown + currentValue.text.substring(selection.max)
+
+        // Position cursor at "url" for easy replacement
+        val urlStart = selection.min + selectedText.length + 3
+        val urlEnd = urlStart + 3
+        onTextChange(TextFieldValue(newText, TextRange(urlStart, urlEnd)))
+    }
+
+    fun formatImage() {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val altText = if (selection.collapsed) "alt text" else currentValue.text.substring(selection.min, selection.max)
+
+        val imageMarkdown = "![$altText](image-url)"
+        val newText = currentValue.text.substring(0, selection.min) + imageMarkdown + currentValue.text.substring(selection.max)
+
+        // Position cursor at "image-url"
+        val urlStart = selection.min + altText.length + 4
+        val urlEnd = urlStart + 9
+        onTextChange(TextFieldValue(newText, TextRange(urlStart, urlEnd)))
+    }
+
+    fun formatHorizontalRule() {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val text = currentValue.text
+
+        // Insert on new line
+        val insertText = if (selection.start > 0 && text[selection.start - 1] != '\n') "\n---\n" else "---\n"
+        val newText = text.substring(0, selection.start) + insertText + text.substring(selection.end)
+
+        onTextChange(TextFieldValue(newText, TextRange(selection.start + insertText.length)))
+    }
+
+    private fun wrapSelection(prefix: String, suffix: String) {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val text = currentValue.text
+
+        if (selection.collapsed) {
+            // No selection - just insert markers and place cursor between them
+            val newText = text.substring(0, selection.start) + prefix + suffix + text.substring(selection.end)
+            onTextChange(TextFieldValue(newText, TextRange(selection.start + prefix.length)))
+        } else {
+            // Wrap selected text
+            val selectedText = text.substring(selection.min, selection.max)
+            val newText = text.substring(0, selection.min) + prefix + selectedText + suffix + text.substring(selection.max)
+            onTextChange(TextFieldValue(newText, TextRange(selection.min + prefix.length, selection.max + prefix.length)))
+        }
+    }
+
+    private fun prefixLine(prefix: String) {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val text = currentValue.text
+
+        // Find start of current line
+        val lineStart = text.lastIndexOf('\n', selection.min - 1).let { if (it < 0) 0 else it + 1 }
+
+        val newText = text.substring(0, lineStart) + prefix + text.substring(lineStart)
+        onTextChange(TextFieldValue(newText, TextRange(selection.start + prefix.length)))
+    }
+
+    private fun prefixSelectedLines(prefix: String) {
+        val currentValue = _editorState.value.textFieldValue
+        val selection = currentValue.selection
+        val text = currentValue.text
+
+        // Find start and end of selected lines
+        val lineStart = text.lastIndexOf('\n', selection.min - 1).let { if (it < 0) 0 else it + 1 }
+        val lineEnd = text.indexOf('\n', selection.max).let { if (it < 0) text.length else it }
+
+        val selectedLines = text.substring(lineStart, lineEnd).split('\n')
+        val prefixedLines = selectedLines.joinToString("\n") { "$prefix$it" }
+
+        val newText = text.substring(0, lineStart) + prefixedLines + text.substring(lineEnd)
+        onTextChange(TextFieldValue(newText, TextRange(lineStart, lineStart + prefixedLines.length)))
+    }
+
     // Select all
     fun selectAll() {
         val text = _editorState.value.textFieldValue.text
@@ -485,6 +666,10 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
 
     fun resetZoom() {
         viewModelScope.launch { prefsRepository.setZoomLevel(1f) }
+    }
+
+    fun setAutoSave(enabled: Boolean) {
+        viewModelScope.launch { prefsRepository.setAutoSave(enabled) }
     }
 
     fun clearRecentFiles() {

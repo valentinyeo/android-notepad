@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -41,10 +42,12 @@ fun TopMenuBar(
     canRedo: Boolean,
     wordWrap: Boolean,
     showStatusBar: Boolean,
+    autoSave: Boolean,
     onNewFile: () -> Unit,
     onOpenFile: () -> Unit,
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
+    onSaveAsMarkdown: () -> Unit,
     onShowRecentFiles: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
@@ -59,14 +62,29 @@ fun TopMenuBar(
     onResetZoom: () -> Unit,
     onToggleWordWrap: () -> Unit,
     onToggleStatusBar: () -> Unit,
+    onToggleAutoSave: () -> Unit,
     onShowFontDialog: () -> Unit,
     onShowThemeDialog: () -> Unit,
     onShowAbout: () -> Unit,
+    onFormatBold: () -> Unit,
+    onFormatItalic: () -> Unit,
+    onFormatStrikethrough: () -> Unit,
+    onFormatInlineCode: () -> Unit,
+    onFormatCodeBlock: () -> Unit,
+    onFormatHeader: (Int) -> Unit,
+    onFormatBulletList: () -> Unit,
+    onFormatNumberedList: () -> Unit,
+    onFormatBlockquote: () -> Unit,
+    onFormatLink: () -> Unit,
+    onFormatImage: () -> Unit,
+    onFormatHorizontalRule: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
     var showMainMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showFormatMenu by remember { mutableStateOf(false) }
+    var showHeaderMenu by remember { mutableStateOf(false) }
 
     TopAppBar(
         navigationIcon = {
@@ -85,6 +103,7 @@ fun TopMenuBar(
                     DropdownMenuItem(text = { Text("Open...") }, onClick = { showMainMenu = false; onOpenFile() })
                     DropdownMenuItem(text = { Text("Save") }, onClick = { showMainMenu = false; onSave() })
                     DropdownMenuItem(text = { Text("Save As...") }, onClick = { showMainMenu = false; onSaveAs() })
+                    DropdownMenuItem(text = { Text("Save As Markdown...") }, onClick = { showMainMenu = false; onSaveAsMarkdown() })
                     DropdownMenuItem(text = { Text("Recent Files") }, onClick = { showMainMenu = false; onShowRecentFiles() })
                     HorizontalDivider()
                     // Edit operations
@@ -158,6 +177,97 @@ fun TopMenuBar(
                 Icon(Icons.Default.DarkMode, contentDescription = "Theme")
             }
 
+            // Format menu (Markdown)
+            Box {
+                IconButton(onClick = { showFormatMenu = true }) {
+                    Icon(Icons.Default.FormatBold, contentDescription = "Format")
+                }
+
+                DropdownMenu(
+                    expanded = showFormatMenu,
+                    onDismissRequest = { showFormatMenu = false; showHeaderMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Bold") },
+                        onClick = { showFormatMenu = false; onFormatBold() },
+                        trailingIcon = { Text("**B**", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Italic") },
+                        onClick = { showFormatMenu = false; onFormatItalic() },
+                        trailingIcon = { Text("*I*", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Strikethrough") },
+                        onClick = { showFormatMenu = false; onFormatStrikethrough() },
+                        trailingIcon = { Text("~~S~~", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    HorizontalDivider()
+                    // Headers submenu
+                    Box {
+                        DropdownMenuItem(
+                            text = { Text("Header") },
+                            onClick = { showHeaderMenu = !showHeaderMenu },
+                            trailingIcon = { Text("▶") }
+                        )
+                        DropdownMenu(
+                            expanded = showHeaderMenu,
+                            onDismissRequest = { showHeaderMenu = false }
+                        ) {
+                            (1..6).forEach { level ->
+                                DropdownMenuItem(
+                                    text = { Text("H$level - ${"#".repeat(level)}") },
+                                    onClick = { showFormatMenu = false; showHeaderMenu = false; onFormatHeader(level) }
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Bullet List") },
+                        onClick = { showFormatMenu = false; onFormatBulletList() },
+                        trailingIcon = { Text("- item", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Numbered List") },
+                        onClick = { showFormatMenu = false; onFormatNumberedList() },
+                        trailingIcon = { Text("1. item", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Blockquote") },
+                        onClick = { showFormatMenu = false; onFormatBlockquote() },
+                        trailingIcon = { Text("> quote", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Inline Code") },
+                        onClick = { showFormatMenu = false; onFormatInlineCode() },
+                        trailingIcon = { Text("`code`", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Code Block") },
+                        onClick = { showFormatMenu = false; onFormatCodeBlock() },
+                        trailingIcon = { Text("```", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Link") },
+                        onClick = { showFormatMenu = false; onFormatLink() },
+                        trailingIcon = { Text("[]()", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Image") },
+                        onClick = { showFormatMenu = false; onFormatImage() },
+                        trailingIcon = { Text("![]()", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Horizontal Rule") },
+                        onClick = { showFormatMenu = false; onFormatHorizontalRule() },
+                        trailingIcon = { Text("---", style = MaterialTheme.typography.bodySmall) }
+                    )
+                }
+            }
+
             // More menu (View + Help)
             Box {
                 IconButton(onClick = { showMoreMenu = true }) {
@@ -180,6 +290,10 @@ fun TopMenuBar(
                     DropdownMenuItem(
                         text = { Text(if (showStatusBar) "✓ Status Bar" else "   Status Bar") },
                         onClick = { showMoreMenu = false; onToggleStatusBar() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (autoSave) "✓ Auto Save" else "   Auto Save") },
+                        onClick = { showMoreMenu = false; onToggleAutoSave() }
                     )
                     HorizontalDivider()
                     DropdownMenuItem(text = { Text("Font...") }, onClick = { showMoreMenu = false; onShowFontDialog() })

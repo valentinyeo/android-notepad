@@ -13,6 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -66,6 +73,12 @@ fun NotepadScreen(
         uri?.let { viewModel.saveFile(it) }
     }
 
+    val saveMarkdownLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/markdown")
+    ) { uri ->
+        uri?.let { viewModel.saveFile(it) }
+    }
+
     val scrollState = rememberScrollState()
 
     Scaffold(
@@ -78,8 +91,9 @@ fun NotepadScreen(
                 canRedo = viewModel.canRedo(),
                 wordWrap = preferences.wordWrap,
                 showStatusBar = preferences.showStatusBar,
+                autoSave = preferences.autoSave,
                 onNewFile = { viewModel.newFile() },
-                onOpenFile = { openFileLauncher.launch(arrayOf("text/plain", "*/*")) },
+                onOpenFile = { openFileLauncher.launch(arrayOf("text/plain", "text/markdown", "*/*")) },
                 onSave = {
                     if (editorState.fileUri != null) {
                         viewModel.saveFile()
@@ -88,6 +102,10 @@ fun NotepadScreen(
                     }
                 },
                 onSaveAs = { saveFileLauncher.launch(editorState.fileName + ".txt") },
+                onSaveAsMarkdown = {
+                    val baseName = editorState.fileName.removeSuffix(".txt").removeSuffix(".md")
+                    saveMarkdownLauncher.launch("$baseName.md")
+                },
                 onShowRecentFiles = { viewModel.showRecentFiles() },
                 onUndo = { viewModel.undo() },
                 onRedo = { viewModel.redo() },
@@ -102,9 +120,22 @@ fun NotepadScreen(
                 onResetZoom = { viewModel.resetZoom() },
                 onToggleWordWrap = { viewModel.setWordWrap(!preferences.wordWrap) },
                 onToggleStatusBar = { viewModel.setShowStatusBar(!preferences.showStatusBar) },
+                onToggleAutoSave = { viewModel.setAutoSave(!preferences.autoSave) },
                 onShowFontDialog = { viewModel.showFontDialog() },
                 onShowThemeDialog = { showThemeDialog = true },
-                onShowAbout = { viewModel.showAboutDialog() }
+                onShowAbout = { viewModel.showAboutDialog() },
+                onFormatBold = { viewModel.formatBold() },
+                onFormatItalic = { viewModel.formatItalic() },
+                onFormatStrikethrough = { viewModel.formatStrikethrough() },
+                onFormatInlineCode = { viewModel.formatInlineCode() },
+                onFormatCodeBlock = { viewModel.formatCodeBlock() },
+                onFormatHeader = { level -> viewModel.formatHeader(level) },
+                onFormatBulletList = { viewModel.formatBulletList() },
+                onFormatNumberedList = { viewModel.formatNumberedList() },
+                onFormatBlockquote = { viewModel.formatBlockquote() },
+                onFormatLink = { viewModel.formatLink() },
+                onFormatImage = { viewModel.formatImage() },
+                onFormatHorizontalRule = { viewModel.formatHorizontalRule() }
             )
         },
         bottomBar = {
@@ -154,6 +185,23 @@ fun NotepadScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .background(MaterialTheme.colorScheme.background)
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Tab) {
+                            // Insert tab character at cursor position
+                            val currentValue = editorState.textFieldValue
+                            val selection = currentValue.selection
+                            val tabChar = "\t"
+                            val newText = currentValue.text.substring(0, selection.min) +
+                                    tabChar +
+                                    currentValue.text.substring(selection.max)
+                            viewModel.onTextChange(
+                                TextFieldValue(newText, TextRange(selection.min + 1))
+                            )
+                            true // Consume the event
+                        } else {
+                            false // Let other keys pass through
+                        }
+                    }
                     .then(
                         if (preferences.wordWrap) {
                             Modifier.verticalScroll(scrollState)
