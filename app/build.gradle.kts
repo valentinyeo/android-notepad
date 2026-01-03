@@ -19,7 +19,26 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = file("keystore.jks")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "notepad123"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "notepad"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "notepad123"
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            // Use release signing config for consistent debug builds
+            val keystoreFile = file("keystore.jks")
+            if (keystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -27,6 +46,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val keystoreFile = file("keystore.jks")
+            if (keystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
