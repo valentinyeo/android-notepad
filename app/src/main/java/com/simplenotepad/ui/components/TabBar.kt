@@ -102,7 +102,7 @@ private fun Tab(
         modifier = Modifier
             .height(36.dp)
             .widthIn(max = 180.dp)
-            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .clickable(onClick = onClick)
             .padding(start = 12.dp, end = 4.dp),
