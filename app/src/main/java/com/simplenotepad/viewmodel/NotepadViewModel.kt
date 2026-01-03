@@ -21,6 +21,7 @@ import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 data class EditorState(
     val textFieldValue: TextFieldValue = TextFieldValue(""),
@@ -32,6 +33,14 @@ data class EditorState(
     val characterCount: Int = 0,
     val lineCount: Int = 1,
     val encoding: String = "UTF-8"
+)
+
+data class TabState(
+    val id: String = UUID.randomUUID().toString(),
+    val editorState: EditorState = EditorState(),
+    val undoStack: MutableList<TextFieldValue> = mutableListOf(),
+    val redoStack: MutableList<TextFieldValue> = mutableListOf(),
+    val lastSavedContent: String = ""
 )
 
 data class FindReplaceState(
@@ -51,8 +60,10 @@ data class UiState(
     val showFontDialog: Boolean = false,
     val showAboutDialog: Boolean = false,
     val showUnsavedDialog: Boolean = false,
+    val showCloseTabDialog: Boolean = false,
     val showRecentFiles: Boolean = false,
-    val pendingAction: PendingAction? = null
+    val pendingAction: PendingAction? = null,
+    val pendingCloseTabId: String? = null
 )
 
 enum class PendingAction {
@@ -63,6 +74,15 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
 
     private val prefsRepository = PreferencesRepository(application)
 
+    // Tab state management
+    private val initialTab = TabState()
+    private val _tabs = MutableStateFlow<List<TabState>>(listOf(initialTab))
+    val tabs: StateFlow<List<TabState>> = _tabs.asStateFlow()
+
+    private val _activeTabId = MutableStateFlow(initialTab.id)
+    val activeTabId: StateFlow<String> = _activeTabId.asStateFlow()
+
+    // Derived active tab state for UI
     private val _editorState = MutableStateFlow(EditorState())
     val editorState: StateFlow<EditorState> = _editorState.asStateFlow()
 
@@ -74,16 +94,26 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
 
     val preferences = prefsRepository.preferences
 
-    // Undo/Redo stacks
-    private val undoStack = mutableListOf<TextFieldValue>()
-    private val redoStack = mutableListOf<TextFieldValue>()
-    private var lastSavedContent: String = ""
-
     // Auto-save
     private var autoSaveJob: Job? = null
     private val autoSaveIntervalMs = 30_000L // 30 seconds
 
+    // Helper to get current active tab
+    private fun getActiveTab(): TabState? = _tabs.value.find { it.id == _activeTabId.value }
+
+    // Helper to update active tab
+    private fun updateActiveTab(update: (TabState) -> TabState) {
+        _tabs.value = _tabs.value.map { tab ->
+            if (tab.id == _activeTabId.value) update(tab) else tab
+        }
+        // Sync editorState for UI
+        getActiveTab()?.let { _editorState.value = it.editorState }
+    }
+
     init {
+        // Sync initial editor state
+        _editorState.value = initialTab.editorState
+
         viewModelScope.launch {
             val prefs = preferences.first()
             // Initialize with preferences
@@ -106,9 +136,11 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         autoSaveJob = viewModelScope.launch {
             while (true) {
                 delay(autoSaveIntervalMs)
-                val state = _editorState.value
-                if (state.isModified && state.fileUri != null) {
-                    saveFile()
+                // Save all modified tabs that have a file URI
+                _tabs.value.forEach { tab ->
+                    if (tab.editorState.isModified && tab.editorState.fileUri != null) {
+                        saveTabFile(tab.id)
+                    }
                 }
             }
         }
@@ -119,26 +151,97 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         autoSaveJob = null
     }
 
+    // Tab management
+    fun addTab() {
+        val newTab = TabState()
+        _tabs.value = _tabs.value + newTab
+        _activeTabId.value = newTab.id
+        _editorState.value = newTab.editorState
+        _findReplaceState.value = FindReplaceState() // Reset find state for new tab
+    }
+
+    fun switchTab(tabId: String) {
+        if (_tabs.value.any { it.id == tabId }) {
+            _activeTabId.value = tabId
+            getActiveTab()?.let { _editorState.value = it.editorState }
+            _findReplaceState.value = FindReplaceState() // Reset find state when switching
+        }
+    }
+
+    fun closeTab(tabId: String) {
+        val tab = _tabs.value.find { it.id == tabId } ?: return
+
+        if (tab.editorState.isModified) {
+            // Show unsaved dialog for this tab
+            _uiState.value = _uiState.value.copy(
+                showCloseTabDialog = true,
+                pendingCloseTabId = tabId
+            )
+            return
+        }
+
+        performCloseTab(tabId)
+    }
+
+    fun confirmCloseTab() {
+        val tabId = _uiState.value.pendingCloseTabId
+        _uiState.value = _uiState.value.copy(showCloseTabDialog = false, pendingCloseTabId = null)
+        tabId?.let { performCloseTab(it) }
+    }
+
+    fun dismissCloseTabDialog() {
+        _uiState.value = _uiState.value.copy(showCloseTabDialog = false, pendingCloseTabId = null)
+    }
+
+    private fun performCloseTab(tabId: String) {
+        val currentTabs = _tabs.value
+        if (currentTabs.size == 1) {
+            // Last tab - create a new empty one
+            val newTab = TabState()
+            _tabs.value = listOf(newTab)
+            _activeTabId.value = newTab.id
+            _editorState.value = newTab.editorState
+        } else {
+            // Remove tab and switch to adjacent one if needed
+            val tabIndex = currentTabs.indexOfFirst { it.id == tabId }
+            _tabs.value = currentTabs.filter { it.id != tabId }
+
+            if (_activeTabId.value == tabId) {
+                // Switch to previous or next tab
+                val newIndex = (tabIndex - 1).coerceAtLeast(0)
+                val newActiveTab = _tabs.value[newIndex]
+                _activeTabId.value = newActiveTab.id
+                _editorState.value = newActiveTab.editorState
+            }
+        }
+        _findReplaceState.value = FindReplaceState()
+    }
+
     fun onTextChange(newValue: TextFieldValue) {
-        val oldValue = _editorState.value.textFieldValue
+        val activeTab = getActiveTab() ?: return
+        val oldValue = activeTab.editorState.textFieldValue
 
         // Add to undo stack if content changed
         if (oldValue.text != newValue.text) {
-            undoStack.add(oldValue)
-            if (undoStack.size > 100) undoStack.removeAt(0)
-            redoStack.clear()
+            activeTab.undoStack.add(oldValue)
+            if (activeTab.undoStack.size > 100) activeTab.undoStack.removeAt(0)
+            activeTab.redoStack.clear()
         }
 
         val (line, col) = calculateLineColumn(newValue.text, newValue.selection.start)
 
-        _editorState.value = _editorState.value.copy(
-            textFieldValue = newValue,
-            isModified = newValue.text != lastSavedContent,
-            lineNumber = line,
-            columnNumber = col,
-            characterCount = newValue.text.length,
-            lineCount = newValue.text.count { it == '\n' } + 1
-        )
+        updateActiveTab { tab ->
+            tab.copy(
+                editorState = tab.editorState.copy(
+                    textFieldValue = newValue,
+                    isModified = newValue.text != tab.lastSavedContent,
+                    lineNumber = line,
+                    columnNumber = col,
+                    characterCount = newValue.text.length,
+                    lineCount = newValue.text.count { it == '\n' } + 1
+                )
+            )
+        }
 
         // Update find matches if search is active
         if (_findReplaceState.value.searchQuery.isNotEmpty()) {
@@ -158,47 +261,47 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun undo() {
-        if (undoStack.isNotEmpty()) {
-            redoStack.add(_editorState.value.textFieldValue)
-            val previous = undoStack.removeLast()
-            _editorState.value = _editorState.value.copy(
-                textFieldValue = previous,
-                isModified = previous.text != lastSavedContent,
-                characterCount = previous.text.length,
-                lineCount = previous.text.count { it == '\n' } + 1
-            )
+        val activeTab = getActiveTab() ?: return
+        if (activeTab.undoStack.isNotEmpty()) {
+            activeTab.redoStack.add(activeTab.editorState.textFieldValue)
+            val previous = activeTab.undoStack.removeLast()
+            updateActiveTab { tab ->
+                tab.copy(
+                    editorState = tab.editorState.copy(
+                        textFieldValue = previous,
+                        isModified = previous.text != tab.lastSavedContent,
+                        characterCount = previous.text.length,
+                        lineCount = previous.text.count { it == '\n' } + 1
+                    )
+                )
+            }
         }
     }
 
     fun redo() {
-        if (redoStack.isNotEmpty()) {
-            undoStack.add(_editorState.value.textFieldValue)
-            val next = redoStack.removeLast()
-            _editorState.value = _editorState.value.copy(
-                textFieldValue = next,
-                isModified = next.text != lastSavedContent,
-                characterCount = next.text.length,
-                lineCount = next.text.count { it == '\n' } + 1
-            )
+        val activeTab = getActiveTab() ?: return
+        if (activeTab.redoStack.isNotEmpty()) {
+            activeTab.undoStack.add(activeTab.editorState.textFieldValue)
+            val next = activeTab.redoStack.removeLast()
+            updateActiveTab { tab ->
+                tab.copy(
+                    editorState = tab.editorState.copy(
+                        textFieldValue = next,
+                        isModified = next.text != tab.lastSavedContent,
+                        characterCount = next.text.length,
+                        lineCount = next.text.count { it == '\n' } + 1
+                    )
+                )
+            }
         }
     }
 
-    fun canUndo(): Boolean = undoStack.isNotEmpty()
-    fun canRedo(): Boolean = redoStack.isNotEmpty()
+    fun canUndo(): Boolean = getActiveTab()?.undoStack?.isNotEmpty() == true
+    fun canRedo(): Boolean = getActiveTab()?.redoStack?.isNotEmpty() == true
 
     fun newFile(force: Boolean = false) {
-        if (_editorState.value.isModified && !force) {
-            _uiState.value = _uiState.value.copy(
-                showUnsavedDialog = true,
-                pendingAction = PendingAction.NEW_FILE
-            )
-            return
-        }
-
-        lastSavedContent = ""
-        undoStack.clear()
-        redoStack.clear()
-        _editorState.value = EditorState()
+        // Always create a new tab
+        addTab()
     }
 
     fun openFile(uri: Uri) {
@@ -208,19 +311,24 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
                     val content = reader.readText()
-
-                    lastSavedContent = content
-                    undoStack.clear()
-                    redoStack.clear()
-
                     val fileName = getFileName(uri)
-                    _editorState.value = EditorState(
-                        textFieldValue = TextFieldValue(content),
-                        fileUri = uri,
-                        fileName = fileName,
-                        characterCount = content.length,
-                        lineCount = content.count { it == '\n' } + 1
+
+                    // Create new tab with file content
+                    val newTab = TabState(
+                        editorState = EditorState(
+                            textFieldValue = TextFieldValue(content),
+                            fileUri = uri,
+                            fileName = fileName,
+                            characterCount = content.length,
+                            lineCount = content.count { it == '\n' } + 1
+                        ),
+                        lastSavedContent = content
                     )
+
+                    _tabs.value = _tabs.value + newTab
+                    _activeTabId.value = newTab.id
+                    _editorState.value = newTab.editorState
+                    _findReplaceState.value = FindReplaceState()
 
                     prefsRepository.addRecentFile(uri.toString())
                 }
@@ -230,23 +338,44 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun saveFile(uri: Uri? = _editorState.value.fileUri) {
-        val targetUri = uri ?: return
+    fun saveFile(uri: Uri? = null) {
+        val activeTab = getActiveTab() ?: return
+        val targetUri = uri ?: activeTab.editorState.fileUri ?: return
+        saveTabFile(activeTab.id, targetUri)
+    }
+
+    private fun saveTabFile(tabId: String, uri: Uri? = null) {
+        val tab = _tabs.value.find { it.id == tabId } ?: return
+        val targetUri = uri ?: tab.editorState.fileUri ?: return
 
         viewModelScope.launch {
             try {
                 val contentResolver = getApplication<Application>().contentResolver
                 contentResolver.openOutputStream(targetUri, "wt")?.use { outputStream ->
                     val writer = OutputStreamWriter(outputStream, Charsets.UTF_8)
-                    writer.write(_editorState.value.textFieldValue.text)
+                    writer.write(tab.editorState.textFieldValue.text)
                     writer.flush()
 
-                    lastSavedContent = _editorState.value.textFieldValue.text
-                    _editorState.value = _editorState.value.copy(
-                        fileUri = targetUri,
-                        fileName = getFileName(targetUri),
-                        isModified = false
-                    )
+                    val fileName = getFileName(targetUri)
+                    val savedContent = tab.editorState.textFieldValue.text
+
+                    _tabs.value = _tabs.value.map { t ->
+                        if (t.id == tabId) {
+                            t.copy(
+                                editorState = t.editorState.copy(
+                                    fileUri = targetUri,
+                                    fileName = fileName,
+                                    isModified = false
+                                ),
+                                lastSavedContent = savedContent
+                            )
+                        } else t
+                    }
+
+                    // Sync editorState if this is active tab
+                    if (tabId == _activeTabId.value) {
+                        getActiveTab()?.let { _editorState.value = it.editorState }
+                    }
 
                     prefsRepository.addRecentFile(targetUri.toString())
                 }
@@ -362,11 +491,15 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         if (state.currentMatch == 0 || state.matchPositions.isEmpty()) return
 
         val match = state.matchPositions[state.currentMatch - 1]
-        _editorState.value = _editorState.value.copy(
-            textFieldValue = _editorState.value.textFieldValue.copy(
-                selection = TextRange(match.first, match.last + 1)
+        updateActiveTab { tab ->
+            tab.copy(
+                editorState = tab.editorState.copy(
+                    textFieldValue = tab.editorState.textFieldValue.copy(
+                        selection = TextRange(match.first, match.last + 1)
+                    )
+                )
             )
-        )
+        }
     }
 
     fun replaceCurrent() {
@@ -415,13 +548,17 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
             position += lines[i].length + 1
         }
 
-        _editorState.value = _editorState.value.copy(
-            textFieldValue = _editorState.value.textFieldValue.copy(
-                selection = TextRange(position)
-            ),
-            lineNumber = targetLine,
-            columnNumber = 1
-        )
+        updateActiveTab { tab ->
+            tab.copy(
+                editorState = tab.editorState.copy(
+                    textFieldValue = tab.editorState.textFieldValue.copy(
+                        selection = TextRange(position)
+                    ),
+                    lineNumber = targetLine,
+                    columnNumber = 1
+                )
+            )
+        }
         hideGoToDialog()
     }
 
@@ -586,11 +723,15 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
     // Select all
     fun selectAll() {
         val text = _editorState.value.textFieldValue.text
-        _editorState.value = _editorState.value.copy(
-            textFieldValue = _editorState.value.textFieldValue.copy(
-                selection = TextRange(0, text.length)
+        updateActiveTab { tab ->
+            tab.copy(
+                editorState = tab.editorState.copy(
+                    textFieldValue = tab.editorState.textFieldValue.copy(
+                        selection = TextRange(0, text.length)
+                    )
+                )
             )
-        )
+        }
     }
 
     // Dialogs

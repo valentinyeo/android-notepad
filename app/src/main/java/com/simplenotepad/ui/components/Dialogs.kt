@@ -216,6 +216,37 @@ fun ThemeDialog(
 }
 
 @Composable
+fun CloseTabDialog(
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    onCancel: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Close Tab") },
+        text = {
+            Text("This tab has unsaved changes. Do you want to save before closing?")
+        },
+        confirmButton = {
+            TextButton(onClick = onSave) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDiscard) {
+                    Text("Don't Save")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onCancel) {
+                    Text("Cancel")
+                }
+            }
+        }
+    )
+}
+
+@Composable
 fun RecentFilesDialog(
     recentFiles: List<String>,
     onFileSelect: (String) -> Unit,

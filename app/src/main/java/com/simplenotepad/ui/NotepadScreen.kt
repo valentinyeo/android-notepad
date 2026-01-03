@@ -35,11 +35,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.simplenotepad.ui.components.AboutDialog
+import com.simplenotepad.ui.components.CloseTabDialog
 import com.simplenotepad.ui.components.FindReplaceBar
 import com.simplenotepad.ui.components.FontDialog
 import com.simplenotepad.ui.components.GoToLineDialog
 import com.simplenotepad.ui.components.RecentFilesDialog
 import com.simplenotepad.ui.components.StatusBar
+import com.simplenotepad.ui.components.TabBar
 import com.simplenotepad.ui.components.ThemeDialog
 import com.simplenotepad.ui.components.TopMenuBar
 import com.simplenotepad.ui.components.UnsavedChangesDialog
@@ -53,6 +55,8 @@ fun NotepadScreen(
     val editorState by viewModel.editorState.collectAsState()
     val findReplaceState by viewModel.findReplaceState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val tabs by viewModel.tabs.collectAsState()
+    val activeTabId by viewModel.activeTabId.collectAsState()
     val preferences by viewModel.preferences.collectAsState(
         initial = com.simplenotepad.data.PreferencesRepository.AppPreferences()
     )
@@ -153,6 +157,15 @@ fun NotepadScreen(
                 .padding(paddingValues)
                 .imePadding()
         ) {
+            // Tab bar
+            TabBar(
+                tabs = tabs,
+                activeTabId = activeTabId,
+                onTabSelect = { viewModel.switchTab(it) },
+                onTabClose = { viewModel.closeTab(it) },
+                onNewTab = { viewModel.addTab() }
+            )
+
             // Find/Replace bar
             AnimatedVisibility(visible = findReplaceState.isVisible) {
                 FindReplaceBar(
@@ -274,6 +287,29 @@ fun NotepadScreen(
             currentTheme = preferences.themeMode.name,
             onThemeSelect = { viewModel.setThemeMode(ThemeMode.valueOf(it)) },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (uiState.showCloseTabDialog) {
+        CloseTabDialog(
+            onSave = {
+                viewModel.dismissCloseTabDialog()
+                // Save then close
+                if (editorState.fileUri != null) {
+                    viewModel.saveFile()
+                    viewModel.confirmCloseTab()
+                } else {
+                    // Need to save as first - for now just close without saving
+                    // TODO: Implement save-as flow for unsaved tabs
+                    viewModel.confirmCloseTab()
+                }
+            },
+            onDiscard = {
+                viewModel.confirmCloseTab()
+            },
+            onCancel = {
+                viewModel.dismissCloseTabDialog()
+            }
         )
     }
 }
