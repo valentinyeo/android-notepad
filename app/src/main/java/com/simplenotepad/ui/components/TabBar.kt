@@ -101,7 +101,7 @@ private fun Tab(
     Row(
         modifier = Modifier
             .height(36.dp)
-            .widthIn(min = 80.dp, max = 180.dp)
+            .widthIn(max = 180.dp)
             .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
             .background(backgroundColor)
             .clickable(onClick = onClick)
@@ -114,8 +114,7 @@ private fun Tab(
             color = textColor,
             fontSize = 13.sp,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            overflow = TextOverflow.Ellipsis
         )
 
         // Close button
