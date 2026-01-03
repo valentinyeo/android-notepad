@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Notepad icon - simple document with lines -->
+    <group
+        android:translateX="27"
+        android:translateY="27">
+
+        <!-- Document background -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M8,4 L40,4 L48,12 L48,50 C48,51.1 47.1,52 46,52 L8,52 C6.9,52 6,51.1 6,50 L6,6 C6,4.9 6.9,4 8,4 Z"/>
+
+        <!-- Folded corner -->
+        <path
+            android:fillColor="#E3F2FD"
+            android:pathData="M40,4 L40,12 L48,12 Z"/>
+
+        <!-- Text lines -->
+        <path
+            android:fillColor="#90CAF9"
+            android:pathData="M12,20 L36,20"
+            android:strokeWidth="2"
+            android:strokeColor="#1976D2"/>
+        <path
+            android:fillColor="#90CAF9"
+            android:pathData="M12,28 L42,28"
+            android:strokeWidth="2"
+            android:strokeColor="#1976D2"/>
+        <path
+            android:fillColor="#90CAF9"
+            android:pathData="M12,36 L38,36"
+            android:strokeWidth="2"
+            android:strokeColor="#1976D2"/>
+        <path
+            android:fillColor="#90CAF9"
+            android:pathData="M12,44 L30,44"
+            android:strokeWidth="2"
+            android:strokeColor="#1976D2"/>
+    </group>
+</vector>
