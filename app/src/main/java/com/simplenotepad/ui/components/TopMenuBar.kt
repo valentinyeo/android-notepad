@@ -164,7 +164,7 @@ fun TopMenuBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header dropdown (H1, H2, etc.)
+                // Header dropdown
                 Box {
                     IconButton(
                         onClick = { showHeaderMenu = true },
@@ -172,7 +172,7 @@ fun TopMenuBar(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "H1",
+                                "Aa",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -187,9 +187,17 @@ fun TopMenuBar(
                         expanded = showHeaderMenu,
                         onDismissRequest = { showHeaderMenu = false }
                     ) {
-                        (1..6).forEach { level ->
+                        val headerLabels = listOf(
+                            1 to "Title",
+                            2 to "Subtitle",
+                            3 to "Heading",
+                            4 to "Subheading",
+                            5 to "Section",
+                            6 to "Subsection"
+                        )
+                        headerLabels.forEach { (level, label) ->
                             DropdownMenuItem(
-                                text = { Text("H$level") },
+                                text = { Text(label) },
                                 onClick = { showHeaderMenu = false; onFormatHeader(level) }
                             )
                         }
@@ -220,16 +228,12 @@ fun TopMenuBar(
                         onDismissRequest = { showListMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Bullet List") },
+                            text = { Text("Bulleted list") },
                             onClick = { showListMenu = false; onFormatBulletList() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Numbered List") },
+                            text = { Text("Numbered list") },
                             onClick = { showListMenu = false; onFormatNumberedList() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Blockquote") },
-                            onClick = { showListMenu = false; onFormatBlockquote() }
                         )
                     }
                 }
