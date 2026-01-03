@@ -2,9 +2,11 @@ package com.simplenotepad.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -23,32 +25,33 @@ fun StatusBar(
     zoomLevel: Float,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .navigationBarsPadding()
     ) {
-        // Left side - line/column info
         Row(
-            horizontalArrangement = Arrangement.Start,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left side - line/column info
             StatusText("Ln ${editorState.lineNumber}, Col ${editorState.columnNumber}")
-        }
 
-        // Right side - character count, encoding, zoom
-        Row(
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            StatusText("${editorState.characterCount} characters")
-            Spacer(modifier = Modifier.width(16.dp))
-            StatusText(editorState.encoding)
-            Spacer(modifier = Modifier.width(16.dp))
-            StatusText("${(zoomLevel * 100).toInt()}%")
+            // Right side - character count, encoding, zoom
+            Row(
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatusText("${editorState.characterCount} chars")
+                Spacer(modifier = Modifier.width(12.dp))
+                StatusText(editorState.encoding)
+                Spacer(modifier = Modifier.width(12.dp))
+                StatusText("${(zoomLevel * 100).toInt()}%")
+            }
         }
     }
 }
