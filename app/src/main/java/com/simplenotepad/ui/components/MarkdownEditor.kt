@@ -84,57 +84,77 @@ private fun parseMarkdown(
             if (lineIndex > 0) append("\n")
 
             when {
-                // Headers: # to ######
-                line.startsWith("######") -> {
+                // Headers: # to ###### - hide the hashtags by making them nearly invisible
+                line.startsWith("######") && line.length > 6 -> {
+                    // Make hashtags nearly invisible
+                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
+                        append("###### ")
+                    }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
                         fontSize = baseFontSize * 1.1f
-                    )) { append(line) }
+                    )) { append(line.drop(7)) }
                 }
-                line.startsWith("#####") -> {
+                line.startsWith("#####") && line.length > 5 -> {
+                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
+                        append("##### ")
+                    }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
                         fontSize = baseFontSize * 1.15f
-                    )) { append(line) }
+                    )) { append(line.drop(6)) }
                 }
-                line.startsWith("####") -> {
+                line.startsWith("####") && line.length > 4 -> {
+                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
+                        append("#### ")
+                    }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
                         fontSize = baseFontSize * 1.2f
-                    )) { append(line) }
+                    )) { append(line.drop(5)) }
                 }
-                line.startsWith("###") -> {
+                line.startsWith("###") && line.length > 3 -> {
+                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
+                        append("### ")
+                    }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
                         fontSize = baseFontSize * 1.3f
-                    )) { append(line) }
+                    )) { append(line.drop(4)) }
                 }
-                line.startsWith("##") -> {
+                line.startsWith("##") && line.length > 2 -> {
+                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
+                        append("## ")
+                    }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
                         fontSize = baseFontSize * 1.5f
-                    )) { append(line) }
+                    )) { append(line.drop(3)) }
                 }
-                line.startsWith("#") -> {
+                line.startsWith("# ") && line.length > 2 -> {
+                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
+                        append("# ")
+                    }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
                         fontSize = baseFontSize * 1.8f
-                    )) { append(line) }
+                    )) { append(line.drop(2)) }
                 }
-                // Bullet points
+                // Bullet points - show bullet character with faint original marker
                 line.trimStart().startsWith("- ") ||
                 line.trimStart().startsWith("* ") ||
                 line.trimStart().startsWith("+ ") -> {
                     val indent = line.takeWhile { it.isWhitespace() }
                     val content = line.trimStart().drop(2)
                     append(indent)
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                    // Replace marker visually with bullet (same char count: "- " -> "• ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = headerColor)) {
                         append("• ")
                     }
                     appendInlineMarkdown(content, textColor, codeColor, linkColor)

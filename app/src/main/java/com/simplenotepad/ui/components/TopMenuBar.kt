@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,6 +87,8 @@ fun TopMenuBar(
     onFormatImage: () -> Unit,
     onFormatHorizontalRule: () -> Unit,
     onShowNotesExplorer: () -> Unit,
+    onShare: () -> Unit,
+    onQuickSave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -113,6 +117,12 @@ fun TopMenuBar(
                     DropdownMenuItem(text = { Text("Save As Markdown...") }, onClick = { showMainMenu = false; onSaveAsMarkdown() })
                     DropdownMenuItem(text = { Text("Recent Files") }, onClick = { showMainMenu = false; onShowRecentFiles() })
                     DropdownMenuItem(text = { Text("All Notes") }, onClick = { showMainMenu = false; onShowNotesExplorer() })
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Share") },
+                        onClick = { showMainMenu = false; onShare() },
+                        leadingIcon = { Icon(Icons.Default.Share, null) }
+                    )
                     HorizontalDivider()
                     // Edit operations
                     DropdownMenuItem(
@@ -305,6 +315,11 @@ fun TopMenuBar(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         actions = {
+            // Quick Save
+            IconButton(onClick = onQuickSave) {
+                Icon(Icons.Default.Save, contentDescription = "Save")
+            }
+
             // Undo/Redo
             IconButton(onClick = onUndo, enabled = canUndo) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")

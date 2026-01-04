@@ -1,5 +1,6 @@
 package com.simplenotepad.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,12 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material3.Scaffold
@@ -57,6 +60,18 @@ fun NotepadScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var pendingSaveAsUri by remember { mutableStateOf<Uri?>(null) }
+
+    val context = LocalContext.current
+
+    // Share function
+    fun shareNote() {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, editorState.fileName)
+            putExtra(Intent.EXTRA_TEXT, editorState.textFieldValue.text)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share Note"))
+    }
 
     // Show Notes Explorer as full screen when active
     if (uiState.showNotesExplorer) {
@@ -142,23 +157,32 @@ fun NotepadScreen(
                 onFormatLink = { viewModel.formatLink() },
                 onFormatImage = { viewModel.formatImage() },
                 onFormatHorizontalRule = { viewModel.formatHorizontalRule() },
-                onShowNotesExplorer = { viewModel.showNotesExplorer() }
+                onShowNotesExplorer = { viewModel.showNotesExplorer() },
+                onShare = { shareNote() },
+                onQuickSave = {
+                    if (editorState.fileUri != null) {
+                        viewModel.saveFile()
+                    } else {
+                        saveFileLauncher.launch(editorState.fileName + ".txt")
+                    }
+                }
             )
         },
         bottomBar = {
             AnimatedVisibility(visible = preferences.showStatusBar) {
                 StatusBar(
                     editorState = editorState,
-                    zoomLevel = preferences.zoomLevel
+                    zoomLevel = preferences.zoomLevel,
+                    modifier = Modifier.imePadding()
                 )
             }
-        }
+        },
+        modifier = Modifier.imePadding()
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .imePadding()
         ) {
             // Tab bar
             TabBar(
