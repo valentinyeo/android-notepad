@@ -126,6 +126,7 @@ fun NotepadScreen(
                 wordWrap = preferences.wordWrap,
                 showStatusBar = preferences.showStatusBar,
                 autoSave = preferences.autoSave,
+                formattedView = preferences.formattedView,
                 onNewFile = { viewModel.newFile() },
                 onOpenFile = { openFileLauncher.launch(arrayOf("text/plain", "text/markdown", "*/*")) },
                 onSave = {
@@ -155,6 +156,7 @@ fun NotepadScreen(
                 onToggleWordWrap = { viewModel.setWordWrap(!preferences.wordWrap) },
                 onToggleStatusBar = { viewModel.setShowStatusBar(!preferences.showStatusBar) },
                 onToggleAutoSave = { viewModel.setAutoSave(!preferences.autoSave) },
+                onToggleFormattedView = { viewModel.toggleFormattedView() },
                 onShowFontDialog = { viewModel.showFontDialog() },
                 onShowThemeDialog = { showThemeDialog = true },
                 onShowAbout = { viewModel.showAboutDialog() },
@@ -186,6 +188,8 @@ fun NotepadScreen(
                 StatusBar(
                     editorState = editorState,
                     zoomLevel = preferences.zoomLevel,
+                    formattedView = preferences.formattedView,
+                    onToggleFormattedView = { viewModel.toggleFormattedView() },
                     modifier = Modifier.imePadding()
                 )
             }
@@ -231,6 +235,7 @@ fun NotepadScreen(
                     viewModel.onTextChange(newValue)
                 },
                 fontSize = effectiveFontSize,
+                formattedView = preferences.formattedView,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)

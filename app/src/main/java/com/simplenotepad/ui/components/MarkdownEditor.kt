@@ -30,6 +30,7 @@ fun MarkdownEditor(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     fontSize: TextUnit,
+    formattedView: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -38,9 +39,14 @@ fun MarkdownEditor(
     val codeColor = MaterialTheme.colorScheme.tertiary
     val linkColor = MaterialTheme.colorScheme.secondary
 
-    // Parse markdown and create styled text
-    val styledText = remember(value.text, textColor, headerColor, codeColor, linkColor, fontSize) {
-        parseMarkdown(value.text, textColor, headerColor, codeColor, linkColor, fontSize)
+    // Parse markdown and create styled text (only in formatted view)
+    val styledText = remember(value.text, textColor, headerColor, codeColor, linkColor, fontSize, formattedView) {
+        if (formattedView) {
+            parseMarkdown(value.text, textColor, headerColor, codeColor, linkColor, fontSize)
+        } else {
+            // Raw markdown view - just plain text with syntax visible
+            AnnotatedString(value.text)
+        }
     }
 
     Box(modifier = modifier) {

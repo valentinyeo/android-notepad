@@ -1077,6 +1077,17 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { prefsRepository.setAutoSave(enabled) }
     }
 
+    fun setFormattedView(enabled: Boolean) {
+        viewModelScope.launch { prefsRepository.setFormattedView(enabled) }
+    }
+
+    fun toggleFormattedView() {
+        viewModelScope.launch {
+            val current = prefsRepository.preferences.first().formattedView
+            prefsRepository.setFormattedView(!current)
+        }
+    }
+
     fun clearRecentFiles() {
         viewModelScope.launch { prefsRepository.clearRecentFiles() }
     }

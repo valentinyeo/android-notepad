@@ -29,6 +29,7 @@ class PreferencesRepository(private val context: Context) {
         val SAVED_SESSION = stringPreferencesKey("saved_session")
         val ACTIVE_TAB_ID = stringPreferencesKey("active_tab_id")
         val NOTES_FOLDER_URI = stringPreferencesKey("notes_folder_uri")
+        val FORMATTED_VIEW = booleanPreferencesKey("formatted_view")
     }
 
     data class AppPreferences(
@@ -39,7 +40,8 @@ class PreferencesRepository(private val context: Context) {
         val recentFiles: List<String> = emptyList(),
         val zoomLevel: Float = 1f,
         val autoSave: Boolean = false,
-        val notesFolderUri: String? = null
+        val notesFolderUri: String? = null,
+        val formattedView: Boolean = true  // true = formatted, false = markdown syntax
     )
 
     val preferences: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -51,7 +53,8 @@ class PreferencesRepository(private val context: Context) {
             recentFiles = prefs[Keys.RECENT_FILES]?.toList() ?: emptyList(),
             zoomLevel = prefs[Keys.ZOOM_LEVEL] ?: 1f,
             autoSave = prefs[Keys.AUTO_SAVE] ?: false,
-            notesFolderUri = prefs[Keys.NOTES_FOLDER_URI]
+            notesFolderUri = prefs[Keys.NOTES_FOLDER_URI],
+            formattedView = prefs[Keys.FORMATTED_VIEW] ?: true
         )
     }
 
@@ -77,6 +80,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setAutoSave(enabled: Boolean) {
         context.dataStore.edit { it[Keys.AUTO_SAVE] = enabled }
+    }
+
+    suspend fun setFormattedView(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FORMATTED_VIEW] = enabled }
     }
 
     suspend fun setNotesFolderUri(uri: String?) {

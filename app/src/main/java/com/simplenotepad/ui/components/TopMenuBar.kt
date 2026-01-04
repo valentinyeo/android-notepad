@@ -51,6 +51,7 @@ fun TopMenuBar(
     wordWrap: Boolean,
     showStatusBar: Boolean,
     autoSave: Boolean,
+    formattedView: Boolean,
     onNewFile: () -> Unit,
     onOpenFile: () -> Unit,
     onSave: () -> Unit,
@@ -71,6 +72,7 @@ fun TopMenuBar(
     onToggleWordWrap: () -> Unit,
     onToggleStatusBar: () -> Unit,
     onToggleAutoSave: () -> Unit,
+    onToggleFormattedView: () -> Unit,
     onShowFontDialog: () -> Unit,
     onShowThemeDialog: () -> Unit,
     onShowAbout: () -> Unit,
@@ -354,6 +356,11 @@ fun TopMenuBar(
                     DropdownMenuItem(
                         text = { Text(if (autoSave) "✓ Auto Save" else "   Auto Save") },
                         onClick = { showMoreMenu = false; onToggleAutoSave() }
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(if (formattedView) "Formatted View" else "Markdown View") },
+                        onClick = { showMoreMenu = false; onToggleFormattedView() }
                     )
                     HorizontalDivider()
                     DropdownMenuItem(text = { Text("Font...") }, onClick = { showMoreMenu = false; onShowFontDialog() })
