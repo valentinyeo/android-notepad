@@ -34,7 +34,7 @@ fun MarkdownEditor(
 ) {
     val scrollState = rememberScrollState()
     val textColor = MaterialTheme.colorScheme.onBackground
-    val headerColor = MaterialTheme.colorScheme.primary
+    val headerColor = textColor
     val codeColor = MaterialTheme.colorScheme.tertiary
     val linkColor = MaterialTheme.colorScheme.secondary
 
