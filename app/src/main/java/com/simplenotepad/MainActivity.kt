@@ -38,4 +38,10 @@ class MainActivity : ComponentActivity() {
             viewModel.openFile(uri)
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        // Save session when app goes to background
+        viewModel.saveSession()
+    }
 }

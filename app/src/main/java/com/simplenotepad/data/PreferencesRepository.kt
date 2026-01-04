@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.simplenotepad.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -25,6 +26,8 @@ class PreferencesRepository(private val context: Context) {
         val RECENT_FILES = stringSetPreferencesKey("recent_files")
         val ZOOM_LEVEL = floatPreferencesKey("zoom_level")
         val AUTO_SAVE = booleanPreferencesKey("auto_save")
+        val SAVED_SESSION = stringPreferencesKey("saved_session")
+        val ACTIVE_TAB_ID = stringPreferencesKey("active_tab_id")
     }
 
     data class AppPreferences(
@@ -92,5 +95,27 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun clearRecentFiles() {
         context.dataStore.edit { it[Keys.RECENT_FILES] = emptySet() }
+    }
+
+    // Session persistence
+    suspend fun saveSession(sessionJson: String, activeTabId: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SAVED_SESSION] = sessionJson
+            prefs[Keys.ACTIVE_TAB_ID] = activeTabId
+        }
+    }
+
+    suspend fun getSession(): Pair<String?, String?> {
+        val prefs = context.dataStore.data.map { prefs ->
+            Pair(prefs[Keys.SAVED_SESSION], prefs[Keys.ACTIVE_TAB_ID])
+        }
+        return prefs.first()
+    }
+
+    suspend fun clearSession() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.SAVED_SESSION)
+            prefs.remove(Keys.ACTIVE_TAB_ID)
+        }
     }
 }

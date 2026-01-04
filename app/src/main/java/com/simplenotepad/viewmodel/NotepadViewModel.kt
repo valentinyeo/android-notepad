@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -62,6 +64,7 @@ data class UiState(
     val showUnsavedDialog: Boolean = false,
     val showCloseTabDialog: Boolean = false,
     val showRecentFiles: Boolean = false,
+    val showNotesExplorer: Boolean = false,
     val pendingAction: PendingAction? = null,
     val pendingCloseTabId: String? = null
 )
@@ -111,12 +114,9 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
     }
 
     init {
-        // Sync initial editor state
-        _editorState.value = initialTab.editorState
-
+        // Restore session or use initial tab
         viewModelScope.launch {
-            val prefs = preferences.first()
-            // Initialize with preferences
+            restoreSession()
         }
 
         // Start auto-save monitoring
@@ -129,6 +129,80 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
                 }
             }
         }
+    }
+
+    private suspend fun restoreSession() {
+        try {
+            val (sessionJson, activeTabId) = prefsRepository.getSession()
+            if (sessionJson != null && sessionJson.isNotEmpty()) {
+                val tabs = deserializeTabs(sessionJson)
+                if (tabs.isNotEmpty()) {
+                    _tabs.value = tabs
+                    _activeTabId.value = activeTabId ?: tabs.first().id
+                    getActiveTab()?.let { _editorState.value = it.editorState }
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            // If restore fails, start fresh
+        }
+        // Default: sync initial editor state
+        _editorState.value = initialTab.editorState
+    }
+
+    fun saveSession() {
+        viewModelScope.launch {
+            try {
+                val sessionJson = serializeTabs(_tabs.value)
+                prefsRepository.saveSession(sessionJson, _activeTabId.value)
+            } catch (e: Exception) {
+                // Ignore save errors
+            }
+        }
+    }
+
+    private fun serializeTabs(tabs: List<TabState>): String {
+        val jsonArray = JSONArray()
+        tabs.forEach { tab ->
+            val jsonObj = JSONObject().apply {
+                put("id", tab.id)
+                put("fileName", tab.editorState.fileName)
+                put("fileUri", tab.editorState.fileUri?.toString() ?: "")
+                put("content", tab.editorState.textFieldValue.text)
+                put("isModified", tab.editorState.isModified)
+                put("lastSavedContent", tab.lastSavedContent)
+                put("cursorPosition", tab.editorState.textFieldValue.selection.start)
+            }
+            jsonArray.put(jsonObj)
+        }
+        return jsonArray.toString()
+    }
+
+    private fun deserializeTabs(json: String): List<TabState> {
+        val tabs = mutableListOf<TabState>()
+        val jsonArray = JSONArray(json)
+        for (i in 0 until jsonArray.length()) {
+            val jsonObj = jsonArray.getJSONObject(i)
+            val content = jsonObj.getString("content")
+            val cursorPos = jsonObj.optInt("cursorPosition", 0).coerceIn(0, content.length)
+            val fileUriStr = jsonObj.getString("fileUri")
+            val lastSavedContent = jsonObj.optString("lastSavedContent", "")
+
+            val tab = TabState(
+                id = jsonObj.getString("id"),
+                editorState = EditorState(
+                    textFieldValue = TextFieldValue(content, TextRange(cursorPos)),
+                    fileName = jsonObj.getString("fileName"),
+                    fileUri = if (fileUriStr.isNotEmpty()) Uri.parse(fileUriStr) else null,
+                    isModified = jsonObj.getBoolean("isModified"),
+                    characterCount = content.length,
+                    lineCount = content.count { it == '\n' } + 1
+                ),
+                lastSavedContent = lastSavedContent
+            )
+            tabs.add(tab)
+        }
+        return tabs
     }
 
     private fun startAutoSave() {
@@ -836,6 +910,28 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
 
     fun hideRecentFiles() {
         _uiState.value = _uiState.value.copy(showRecentFiles = false)
+    }
+
+    // Notes Explorer
+    fun showNotesExplorer() {
+        _uiState.value = _uiState.value.copy(showNotesExplorer = true)
+    }
+
+    fun hideNotesExplorer() {
+        _uiState.value = _uiState.value.copy(showNotesExplorer = false)
+    }
+
+    fun openNoteFromExplorer(tabId: String) {
+        // If it's an existing tab, just switch to it
+        if (_tabs.value.any { it.id == tabId }) {
+            switchTab(tabId)
+            hideNotesExplorer()
+        }
+    }
+
+    fun deleteNote(tabId: String) {
+        // Close the tab without prompting
+        performCloseTab(tabId)
     }
 
     // Preferences

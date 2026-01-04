@@ -84,6 +84,7 @@ fun TopMenuBar(
     onFormatLink: () -> Unit,
     onFormatImage: () -> Unit,
     onFormatHorizontalRule: () -> Unit,
+    onShowNotesExplorer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -111,6 +112,7 @@ fun TopMenuBar(
                     DropdownMenuItem(text = { Text("Save As...") }, onClick = { showMainMenu = false; onSaveAs() })
                     DropdownMenuItem(text = { Text("Save As Markdown...") }, onClick = { showMainMenu = false; onSaveAsMarkdown() })
                     DropdownMenuItem(text = { Text("Recent Files") }, onClick = { showMainMenu = false; onShowRecentFiles() })
+                    DropdownMenuItem(text = { Text("All Notes") }, onClick = { showMainMenu = false; onShowNotesExplorer() })
                     HorizontalDivider()
                     // Edit operations
                     DropdownMenuItem(

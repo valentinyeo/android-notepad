@@ -32,6 +32,7 @@ import com.simplenotepad.ui.components.FindReplaceBar
 import com.simplenotepad.ui.components.FontDialog
 import com.simplenotepad.ui.components.GoToLineDialog
 import com.simplenotepad.ui.components.MarkdownEditor
+import com.simplenotepad.ui.components.NotesExplorer
 import com.simplenotepad.ui.components.RecentFilesDialog
 import com.simplenotepad.ui.components.StatusBar
 import com.simplenotepad.ui.components.TabBar
@@ -56,6 +57,18 @@ fun NotepadScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var pendingSaveAsUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Show Notes Explorer as full screen when active
+    if (uiState.showNotesExplorer) {
+        NotesExplorer(
+            tabs = tabs,
+            activeTabId = activeTabId,
+            onNoteClick = { viewModel.openNoteFromExplorer(it) },
+            onNoteDelete = { viewModel.deleteNote(it) },
+            onBack = { viewModel.hideNotesExplorer() }
+        )
+        return
+    }
 
     // File picker launchers
     val openFileLauncher = rememberLauncherForActivityResult(
@@ -128,7 +141,8 @@ fun NotepadScreen(
                 onFormatBlockquote = { viewModel.formatBlockquote() },
                 onFormatLink = { viewModel.formatLink() },
                 onFormatImage = { viewModel.formatImage() },
-                onFormatHorizontalRule = { viewModel.formatHorizontalRule() }
+                onFormatHorizontalRule = { viewModel.formatHorizontalRule() },
+                onShowNotesExplorer = { viewModel.showNotesExplorer() }
             )
         },
         bottomBar = {
