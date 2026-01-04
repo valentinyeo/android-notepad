@@ -74,24 +74,6 @@ fun NotepadScreen(
         context.startActivity(Intent.createChooser(shareIntent, "Share Note"))
     }
 
-    // Show Notes Explorer as full screen when active
-    if (uiState.showNotesExplorer) {
-        NotesExplorer(
-            tabs = tabs,
-            activeTabId = activeTabId,
-            folderFiles = folderFiles,
-            notesFolderUri = preferences.notesFolderUri,
-            onNoteClick = { viewModel.openNoteFromExplorer(it) },
-            onNoteDelete = { viewModel.deleteNote(it) },
-            onFolderFileClick = { viewModel.openFileFromFolder(it) },
-            onSelectFolder = { folderPickerLauncher.launch(null) },
-            onClearFolder = { viewModel.clearNotesFolder() },
-            onRefreshFolder = { viewModel.refreshFolderFiles() },
-            onBack = { viewModel.hideNotesExplorer() }
-        )
-        return
-    }
-
     // File picker launchers
     val openFileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -115,6 +97,24 @@ fun NotepadScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let { viewModel.setNotesFolder(it) }
+    }
+
+    // Show Notes Explorer as full screen when active
+    if (uiState.showNotesExplorer) {
+        NotesExplorer(
+            tabs = tabs,
+            activeTabId = activeTabId,
+            folderFiles = folderFiles,
+            notesFolderUri = preferences.notesFolderUri,
+            onNoteClick = { viewModel.openNoteFromExplorer(it) },
+            onNoteDelete = { viewModel.deleteNote(it) },
+            onFolderFileClick = { viewModel.openFileFromFolder(it) },
+            onSelectFolder = { folderPickerLauncher.launch(null) },
+            onClearFolder = { viewModel.clearNotesFolder() },
+            onRefreshFolder = { viewModel.refreshFolderFiles() },
+            onBack = { viewModel.hideNotesExplorer() }
+        )
+        return
     }
 
     Scaffold(
