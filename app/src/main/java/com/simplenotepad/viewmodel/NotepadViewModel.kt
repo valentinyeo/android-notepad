@@ -228,17 +228,20 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
             activeTab.redoStack.clear()
         }
 
-        val (line, col) = calculateLineColumn(newValue.text, newValue.selection.start)
+        // Check for list auto-continuation (when Enter is pressed after a list item)
+        val processedValue = processListContinuation(oldValue, newValue)
+
+        val (line, col) = calculateLineColumn(processedValue.text, processedValue.selection.start)
 
         updateActiveTab { tab ->
             tab.copy(
                 editorState = tab.editorState.copy(
-                    textFieldValue = newValue,
-                    isModified = newValue.text != tab.lastSavedContent,
+                    textFieldValue = processedValue,
+                    isModified = processedValue.text != tab.lastSavedContent,
                     lineNumber = line,
                     columnNumber = col,
-                    characterCount = newValue.text.length,
-                    lineCount = newValue.text.count { it == '\n' } + 1
+                    characterCount = processedValue.text.length,
+                    lineCount = processedValue.text.count { it == '\n' } + 1
                 )
             )
         }
@@ -247,6 +250,67 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         if (_findReplaceState.value.searchQuery.isNotEmpty()) {
             updateFindMatches()
         }
+    }
+
+    private fun processListContinuation(oldValue: TextFieldValue, newValue: TextFieldValue): TextFieldValue {
+        // Only process if a single newline was just inserted
+        if (newValue.text.length != oldValue.text.length + 1) return newValue
+
+        val cursorPos = newValue.selection.start
+        if (cursorPos == 0) return newValue
+
+        // Check if a newline was just typed
+        if (newValue.text.getOrNull(cursorPos - 1) != '\n') return newValue
+
+        // Find the previous line
+        val textBeforeNewline = newValue.text.substring(0, cursorPos - 1)
+        val prevLineStart = textBeforeNewline.lastIndexOf('\n') + 1
+        val prevLine = textBeforeNewline.substring(prevLineStart)
+
+        // Check for bullet list patterns: "- ", "* ", "+ "
+        val bulletMatch = Regex("^(\\s*)([-*+])\\s").find(prevLine)
+        if (bulletMatch != null) {
+            val indent = bulletMatch.groupValues[1]
+            val bullet = bulletMatch.groupValues[2]
+            // If previous line was just the bullet with no content, remove it
+            if (prevLine.trim() == bullet) {
+                val newText = newValue.text.substring(0, prevLineStart) + newValue.text.substring(cursorPos)
+                return TextFieldValue(newText, TextRange(prevLineStart))
+            }
+            val continuation = "$indent$bullet "
+            val newText = newValue.text.substring(0, cursorPos) + continuation + newValue.text.substring(cursorPos)
+            return TextFieldValue(newText, TextRange(cursorPos + continuation.length))
+        }
+
+        // Check for numbered list pattern: "1. ", "2. ", etc.
+        val numberMatch = Regex("^(\\s*)(\\d+)\\.\\s").find(prevLine)
+        if (numberMatch != null) {
+            val indent = numberMatch.groupValues[1]
+            val number = numberMatch.groupValues[2].toIntOrNull() ?: return newValue
+            // If previous line was just the number with no content, remove it
+            if (prevLine.trim() == "$number.") {
+                val newText = newValue.text.substring(0, prevLineStart) + newValue.text.substring(cursorPos)
+                return TextFieldValue(newText, TextRange(prevLineStart))
+            }
+            val continuation = "$indent${number + 1}. "
+            val newText = newValue.text.substring(0, cursorPos) + continuation + newValue.text.substring(cursorPos)
+            return TextFieldValue(newText, TextRange(cursorPos + continuation.length))
+        }
+
+        // Check for blockquote pattern: "> "
+        val quoteMatch = Regex("^(\\s*>\\s*)").find(prevLine)
+        if (quoteMatch != null) {
+            val quotePrefix = quoteMatch.groupValues[1]
+            // If previous line was just ">", remove it
+            if (prevLine.trim() == ">") {
+                val newText = newValue.text.substring(0, prevLineStart) + newValue.text.substring(cursorPos)
+                return TextFieldValue(newText, TextRange(prevLineStart))
+            }
+            val newText = newValue.text.substring(0, cursorPos) + quotePrefix + newValue.text.substring(cursorPos)
+            return TextFieldValue(newText, TextRange(cursorPos + quotePrefix.length))
+        }
+
+        return newValue
     }
 
     private fun calculateLineColumn(text: String, position: Int): Pair<Int, Int> {

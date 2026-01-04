@@ -4,15 +4,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -20,7 +16,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,9 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.simplenotepad.ui.components.AboutDialog
@@ -39,6 +31,7 @@ import com.simplenotepad.ui.components.CloseTabDialog
 import com.simplenotepad.ui.components.FindReplaceBar
 import com.simplenotepad.ui.components.FontDialog
 import com.simplenotepad.ui.components.GoToLineDialog
+import com.simplenotepad.ui.components.MarkdownEditor
 import com.simplenotepad.ui.components.RecentFilesDialog
 import com.simplenotepad.ui.components.StatusBar
 import com.simplenotepad.ui.components.TabBar
@@ -82,8 +75,6 @@ fun NotepadScreen(
     ) { uri ->
         uri?.let { viewModel.saveFile(it) }
     }
-
-    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -183,19 +174,15 @@ fun NotepadScreen(
             // Editor
             val effectiveFontSize = (preferences.fontSize * preferences.zoomLevel).sp
 
-            BasicTextField(
+            MarkdownEditor(
                 value = editorState.textFieldValue,
-                onValueChange = { viewModel.onTextChange(it) },
-                textStyle = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = effectiveFontSize,
-                    color = MaterialTheme.colorScheme.onBackground
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                onValueChange = { newValue ->
+                    viewModel.onTextChange(newValue)
+                },
+                fontSize = effectiveFontSize,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(MaterialTheme.colorScheme.background)
                     .onKeyEvent { keyEvent ->
                         if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Tab) {
                             // Insert tab character at cursor position
@@ -213,14 +200,6 @@ fun NotepadScreen(
                             false // Let other keys pass through
                         }
                     }
-                    .then(
-                        if (preferences.wordWrap) {
-                            Modifier.verticalScroll(scrollState)
-                        } else {
-                            Modifier.verticalScroll(scrollState)
-                        }
-                    )
-                    .padding(12.dp)
             )
         }
     }
