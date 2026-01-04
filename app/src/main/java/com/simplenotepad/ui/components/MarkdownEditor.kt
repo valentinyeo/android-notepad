@@ -83,13 +83,17 @@ private fun parseMarkdown(
         lines.forEachIndexed { lineIndex, line ->
             if (lineIndex > 0) append("\n")
 
+            // Hidden style for markdown syntax (completely invisible)
+            val hiddenStyle = SpanStyle(
+                color = textColor.copy(alpha = 0f),
+                fontSize = 0.1.sp,
+                letterSpacing = (-0.5).sp
+            )
+
             when {
-                // Headers: # to ###### - hide the hashtags by making them nearly invisible
+                // Headers: # to ###### - completely hide the hashtags
                 line.startsWith("######") && line.length > 6 -> {
-                    // Make hashtags nearly invisible
-                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
-                        append("###### ")
-                    }
+                    withStyle(hiddenStyle) { append("###### ") }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
@@ -97,9 +101,7 @@ private fun parseMarkdown(
                     )) { append(line.drop(7)) }
                 }
                 line.startsWith("#####") && line.length > 5 -> {
-                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
-                        append("##### ")
-                    }
+                    withStyle(hiddenStyle) { append("##### ") }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
@@ -107,9 +109,7 @@ private fun parseMarkdown(
                     )) { append(line.drop(6)) }
                 }
                 line.startsWith("####") && line.length > 4 -> {
-                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
-                        append("#### ")
-                    }
+                    withStyle(hiddenStyle) { append("#### ") }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
@@ -117,9 +117,7 @@ private fun parseMarkdown(
                     )) { append(line.drop(5)) }
                 }
                 line.startsWith("###") && line.length > 3 -> {
-                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
-                        append("### ")
-                    }
+                    withStyle(hiddenStyle) { append("### ") }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
@@ -127,9 +125,7 @@ private fun parseMarkdown(
                     )) { append(line.drop(4)) }
                 }
                 line.startsWith("##") && line.length > 2 -> {
-                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
-                        append("## ")
-                    }
+                    withStyle(hiddenStyle) { append("## ") }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
@@ -137,9 +133,7 @@ private fun parseMarkdown(
                     )) { append(line.drop(3)) }
                 }
                 line.startsWith("# ") && line.length > 2 -> {
-                    withStyle(SpanStyle(color = textColor.copy(alpha = 0.1f), fontSize = baseFontSize * 0.5f)) {
-                        append("# ")
-                    }
+                    withStyle(hiddenStyle) { append("# ") }
                     withStyle(SpanStyle(
                         fontWeight = FontWeight.Bold,
                         color = headerColor,
