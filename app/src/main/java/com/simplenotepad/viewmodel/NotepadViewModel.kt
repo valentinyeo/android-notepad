@@ -778,7 +778,9 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         }.joinToString("\n")
 
         val newText = text.substring(0, lineStart) + numberedLines + text.substring(lineEnd)
-        onTextChange(TextFieldValue(newText, TextRange(lineStart, lineStart + numberedLines.length)))
+        // Place cursor after "1. " on the first line (ready to type)
+        val cursorPos = lineStart + "1. ".length + selectedLines.first().length
+        onTextChange(TextFieldValue(newText, TextRange(cursorPos)))
     }
 
     fun formatBlockquote() {
@@ -867,7 +869,9 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         val prefixedLines = selectedLines.joinToString("\n") { "$prefix$it" }
 
         val newText = text.substring(0, lineStart) + prefixedLines + text.substring(lineEnd)
-        onTextChange(TextFieldValue(newText, TextRange(lineStart, lineStart + prefixedLines.length)))
+        // Place cursor after the prefix on the first line (ready to type)
+        val cursorPos = lineStart + prefix.length + selectedLines.first().length
+        onTextChange(TextFieldValue(newText, TextRange(cursorPos)))
     }
 
     // Select all
