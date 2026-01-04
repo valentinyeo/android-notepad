@@ -187,14 +187,16 @@ fun NotepadScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tab bar
-            TabBar(
-                tabs = tabs,
-                activeTabId = activeTabId,
-                onTabSelect = { viewModel.switchTab(it) },
-                onTabClose = { viewModel.closeTab(it) },
-                onNewTab = { viewModel.addTab() }
-            )
+            // Tab bar at top (if not at bottom)
+            if (!preferences.tabsAtBottom) {
+                TabBar(
+                    tabs = tabs,
+                    activeTabId = activeTabId,
+                    onTabSelect = { viewModel.switchTab(it) },
+                    onTabClose = { viewModel.closeTab(it) },
+                    onNewTab = { viewModel.addTab() }
+                )
+            }
 
             // Find/Replace bar
             AnimatedVisibility(visible = findReplaceState.isVisible) {
@@ -243,6 +245,17 @@ fun NotepadScreen(
                         }
                     }
             )
+
+            // Tab bar at bottom (if enabled)
+            if (preferences.tabsAtBottom) {
+                TabBar(
+                    tabs = tabs,
+                    activeTabId = activeTabId,
+                    onTabSelect = { viewModel.switchTab(it) },
+                    onTabClose = { viewModel.closeTab(it) },
+                    onNewTab = { viewModel.addTab() }
+                )
+            }
         }
     }
 
@@ -286,10 +299,12 @@ fun NotepadScreen(
             showStatusBar = preferences.showStatusBar,
             autoSave = preferences.autoSave,
             formattedView = preferences.formattedView,
+            tabsAtBottom = preferences.tabsAtBottom,
             onToggleWordWrap = { viewModel.setWordWrap(!preferences.wordWrap) },
             onToggleStatusBar = { viewModel.setShowStatusBar(!preferences.showStatusBar) },
             onToggleAutoSave = { viewModel.setAutoSave(!preferences.autoSave) },
             onToggleFormattedView = { viewModel.toggleFormattedView() },
+            onToggleTabsPosition = { viewModel.toggleTabsPosition() },
             onZoomIn = { viewModel.zoomIn() },
             onZoomOut = { viewModel.zoomOut() },
             onResetZoom = { viewModel.resetZoom() },

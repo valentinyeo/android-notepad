@@ -1088,6 +1088,17 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun setTabsAtBottom(enabled: Boolean) {
+        viewModelScope.launch { prefsRepository.setTabsAtBottom(enabled) }
+    }
+
+    fun toggleTabsPosition() {
+        viewModelScope.launch {
+            val current = prefsRepository.preferences.first().tabsAtBottom
+            prefsRepository.setTabsAtBottom(!current)
+        }
+    }
+
     fun clearRecentFiles() {
         viewModelScope.launch { prefsRepository.clearRecentFiles() }
     }

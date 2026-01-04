@@ -86,10 +86,12 @@ fun MainMenuBottomSheet(
     showStatusBar: Boolean,
     autoSave: Boolean,
     formattedView: Boolean,
+    tabsAtBottom: Boolean,
     onToggleWordWrap: () -> Unit,
     onToggleStatusBar: () -> Unit,
     onToggleAutoSave: () -> Unit,
     onToggleFormattedView: () -> Unit,
+    onToggleTabsPosition: () -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onResetZoom: () -> Unit,
@@ -142,6 +144,7 @@ fun MainMenuBottomSheet(
             ToggleMenuItem("Word Wrap", wordWrap) { onDismiss(); onToggleWordWrap() }
             ToggleMenuItem("Status Bar", showStatusBar) { onDismiss(); onToggleStatusBar() }
             ToggleMenuItem("Auto Save", autoSave) { onDismiss(); onToggleAutoSave() }
+            ToggleMenuItem("Tabs at Bottom", tabsAtBottom) { onDismiss(); onToggleTabsPosition() }
             MenuItem(
                 Icons.Default.Visibility,
                 if (formattedView) "Switch to Markdown View" else "Switch to Formatted View"

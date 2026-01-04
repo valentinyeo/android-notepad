@@ -30,6 +30,7 @@ class PreferencesRepository(private val context: Context) {
         val ACTIVE_TAB_ID = stringPreferencesKey("active_tab_id")
         val NOTES_FOLDER_URI = stringPreferencesKey("notes_folder_uri")
         val FORMATTED_VIEW = booleanPreferencesKey("formatted_view")
+        val TABS_AT_BOTTOM = booleanPreferencesKey("tabs_at_bottom")
     }
 
     data class AppPreferences(
@@ -41,7 +42,8 @@ class PreferencesRepository(private val context: Context) {
         val zoomLevel: Float = 1f,
         val autoSave: Boolean = false,
         val notesFolderUri: String? = null,
-        val formattedView: Boolean = true  // true = formatted, false = markdown syntax
+        val formattedView: Boolean = true,  // true = formatted, false = markdown syntax
+        val tabsAtBottom: Boolean = false   // true = tabs at bottom, false = tabs at top
     )
 
     val preferences: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -54,7 +56,8 @@ class PreferencesRepository(private val context: Context) {
             zoomLevel = prefs[Keys.ZOOM_LEVEL] ?: 1f,
             autoSave = prefs[Keys.AUTO_SAVE] ?: false,
             notesFolderUri = prefs[Keys.NOTES_FOLDER_URI],
-            formattedView = prefs[Keys.FORMATTED_VIEW] ?: true
+            formattedView = prefs[Keys.FORMATTED_VIEW] ?: true,
+            tabsAtBottom = prefs[Keys.TABS_AT_BOTTOM] ?: false
         )
     }
 
@@ -84,6 +87,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setFormattedView(enabled: Boolean) {
         context.dataStore.edit { it[Keys.FORMATTED_VIEW] = enabled }
+    }
+
+    suspend fun setTabsAtBottom(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.TABS_AT_BOTTOM] = enabled }
     }
 
     suspend fun setNotesFolderUri(uri: String?) {
