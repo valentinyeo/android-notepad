@@ -28,6 +28,7 @@ class PreferencesRepository(private val context: Context) {
         val AUTO_SAVE = booleanPreferencesKey("auto_save")
         val SAVED_SESSION = stringPreferencesKey("saved_session")
         val ACTIVE_TAB_ID = stringPreferencesKey("active_tab_id")
+        val NOTES_FOLDER_URI = stringPreferencesKey("notes_folder_uri")
     }
 
     data class AppPreferences(
@@ -37,7 +38,8 @@ class PreferencesRepository(private val context: Context) {
         val showStatusBar: Boolean = true,
         val recentFiles: List<String> = emptyList(),
         val zoomLevel: Float = 1f,
-        val autoSave: Boolean = false
+        val autoSave: Boolean = false,
+        val notesFolderUri: String? = null
     )
 
     val preferences: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -48,7 +50,8 @@ class PreferencesRepository(private val context: Context) {
             showStatusBar = prefs[Keys.SHOW_STATUS_BAR] ?: true,
             recentFiles = prefs[Keys.RECENT_FILES]?.toList() ?: emptyList(),
             zoomLevel = prefs[Keys.ZOOM_LEVEL] ?: 1f,
-            autoSave = prefs[Keys.AUTO_SAVE] ?: false
+            autoSave = prefs[Keys.AUTO_SAVE] ?: false,
+            notesFolderUri = prefs[Keys.NOTES_FOLDER_URI]
         )
     }
 
@@ -74,6 +77,16 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setAutoSave(enabled: Boolean) {
         context.dataStore.edit { it[Keys.AUTO_SAVE] = enabled }
+    }
+
+    suspend fun setNotesFolderUri(uri: String?) {
+        context.dataStore.edit { prefs ->
+            if (uri != null) {
+                prefs[Keys.NOTES_FOLDER_URI] = uri
+            } else {
+                prefs.remove(Keys.NOTES_FOLDER_URI)
+            }
+        }
     }
 
     suspend fun addRecentFile(uri: String) {

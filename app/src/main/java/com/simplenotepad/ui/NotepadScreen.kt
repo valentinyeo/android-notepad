@@ -54,6 +54,7 @@ fun NotepadScreen(
     val uiState by viewModel.uiState.collectAsState()
     val tabs by viewModel.tabs.collectAsState()
     val activeTabId by viewModel.activeTabId.collectAsState()
+    val folderFiles by viewModel.folderFiles.collectAsState()
     val preferences by viewModel.preferences.collectAsState(
         initial = com.simplenotepad.data.PreferencesRepository.AppPreferences()
     )
@@ -78,8 +79,14 @@ fun NotepadScreen(
         NotesExplorer(
             tabs = tabs,
             activeTabId = activeTabId,
+            folderFiles = folderFiles,
+            notesFolderUri = preferences.notesFolderUri,
             onNoteClick = { viewModel.openNoteFromExplorer(it) },
             onNoteDelete = { viewModel.deleteNote(it) },
+            onFolderFileClick = { viewModel.openFileFromFolder(it) },
+            onSelectFolder = { folderPickerLauncher.launch(null) },
+            onClearFolder = { viewModel.clearNotesFolder() },
+            onRefreshFolder = { viewModel.refreshFolderFiles() },
             onBack = { viewModel.hideNotesExplorer() }
         )
         return
@@ -102,6 +109,12 @@ fun NotepadScreen(
         contract = ActivityResultContracts.CreateDocument("text/markdown")
     ) { uri ->
         uri?.let { viewModel.saveFile(it) }
+    }
+
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let { viewModel.setNotesFolder(it) }
     }
 
     Scaffold(

@@ -20,16 +20,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -40,15 +47,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.simplenotepad.viewmodel.FolderFile
 import com.simplenotepad.viewmodel.TabState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesExplorer(
     tabs: List<TabState>,
     activeTabId: String,
+    folderFiles: List<FolderFile>,
+    notesFolderUri: String?,
     onNoteClick: (String) -> Unit,
     onNoteDelete: (String) -> Unit,
+    onFolderFileClick: (FolderFile) -> Unit,
+    onSelectFolder: () -> Unit,
+    onClearFolder: () -> Unit,
+    onRefreshFolder: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -60,34 +77,42 @@ fun NotesExplorer(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    if (notesFolderUri != null) {
+                        IconButton(onClick = onRefreshFolder) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
     ) { paddingValues ->
-        if (tabs.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "No notes yet",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Folder selection section
+            item {
+                FolderSection(
+                    notesFolderUri = notesFolderUri,
+                    onSelectFolder = onSelectFolder,
+                    onClearFolder = onClearFolder
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(tabs, key = { it.id }) { tab ->
+
+            // Open Tabs section
+            if (tabs.isNotEmpty()) {
+                item {
+                    SectionHeader("Open Tabs", tabs.size)
+                }
+
+                items(tabs, key = { "tab_${it.id}" }) { tab ->
                     NoteCard(
                         tab = tab,
                         isActive = tab.id == activeTabId,
@@ -96,7 +121,124 @@ fun NotesExplorer(
                     )
                 }
             }
+
+            // Folder Files section
+            if (folderFiles.isNotEmpty()) {
+                item {
+                    SectionHeader("Files in Folder", folderFiles.size)
+                }
+
+                items(folderFiles, key = { "file_${it.uri}" }) { file ->
+                    FolderFileCard(
+                        file = file,
+                        onClick = { onFolderFileClick(file) }
+                    )
+                }
+            }
+
+            // Empty state
+            if (tabs.isEmpty() && folderFiles.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No notes yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun FolderSection(
+    notesFolderUri: String?,
+    onSelectFolder: () -> Unit,
+    onClearFolder: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                if (notesFolderUri != null) Icons.Default.FolderOpen else Icons.Default.Folder,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (notesFolderUri != null) "Notes Folder" else "No folder selected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                if (notesFolderUri != null) {
+                    Text(
+                        text = "Showing .txt and .md files",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (notesFolderUri != null) {
+                TextButton(onClick = onClearFolder) {
+                    Text("Clear")
+                }
+            }
+
+            OutlinedButton(onClick = onSelectFolder) {
+                Icon(
+                    Icons.Default.CreateNewFolder,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(if (notesFolderUri != null) "Change" else "Select")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, count: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "($count)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -171,7 +313,6 @@ private fun NoteCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Title
                     Text(
                         text = editorState.fileName,
                         style = MaterialTheme.typography.titleMedium,
@@ -181,7 +322,6 @@ private fun NoteCard(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    // Modified indicator
                     if (editorState.isModified) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
@@ -195,7 +335,6 @@ private fun NoteCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Status tags
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -211,7 +350,6 @@ private fun NoteCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Preview
                 Text(
                     text = preview,
                     style = MaterialTheme.typography.bodySmall,
@@ -222,15 +360,13 @@ private fun NoteCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Stats
                 Text(
-                    text = "${editorState.characterCount} chars · ${editorState.lineCount} lines",
+                    text = "${editorState.characterCount} chars",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
 
-            // Delete button
             IconButton(
                 onClick = onDelete,
                 modifier = Modifier.size(32.dp)
@@ -241,6 +377,79 @@ private fun NoteCard(
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FolderFileCard(
+    file: FolderFile,
+    onClick: () -> Unit
+) {
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val dateStr = if (file.lastModified > 0) {
+        dateFormat.format(Date(file.lastModified))
+    } else ""
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Description,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = file.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    StatusTag("File", MaterialTheme.colorScheme.tertiary)
+                }
+
+                if (dateStr.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = dateStr,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }

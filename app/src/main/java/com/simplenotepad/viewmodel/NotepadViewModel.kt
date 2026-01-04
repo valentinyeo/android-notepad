@@ -2,6 +2,7 @@ package com.simplenotepad.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
@@ -73,6 +74,13 @@ enum class PendingAction {
     NEW_FILE, OPEN_FILE, EXIT
 }
 
+data class FolderFile(
+    val uri: Uri,
+    val name: String,
+    val lastModified: Long = 0,
+    val size: Long = 0
+)
+
 class NotepadViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefsRepository = PreferencesRepository(application)
@@ -96,6 +104,10 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     val preferences = prefsRepository.preferences
+
+    // Folder files
+    private val _folderFiles = MutableStateFlow<List<FolderFile>>(emptyList())
+    val folderFiles: StateFlow<List<FolderFile>> = _folderFiles.asStateFlow()
 
     // Auto-save
     private var autoSaveJob: Job? = null
@@ -932,6 +944,94 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
     fun deleteNote(tabId: String) {
         // Close the tab without prompting
         performCloseTab(tabId)
+    }
+
+    fun setNotesFolder(uri: Uri) {
+        viewModelScope.launch {
+            // Take persistent permission
+            try {
+                getApplication<Application>().contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                // Permission might already be taken
+            }
+            prefsRepository.setNotesFolderUri(uri.toString())
+            refreshFolderFiles()
+        }
+    }
+
+    fun clearNotesFolder() {
+        viewModelScope.launch {
+            prefsRepository.setNotesFolderUri(null)
+            _folderFiles.value = emptyList()
+        }
+    }
+
+    fun refreshFolderFiles() {
+        viewModelScope.launch {
+            val folderUriString = preferences.first().notesFolderUri ?: return@launch
+            val folderUri = Uri.parse(folderUriString)
+
+            try {
+                val files = mutableListOf<FolderFile>()
+                val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                    folderUri,
+                    DocumentsContract.getTreeDocumentId(folderUri)
+                )
+
+                val projection = arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+                    DocumentsContract.Document.COLUMN_SIZE
+                )
+
+                getApplication<Application>().contentResolver.query(
+                    childrenUri,
+                    projection,
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    val idColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                    val nameColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                    val mimeColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                    val modifiedColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                    val sizeColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_SIZE)
+
+                    while (cursor.moveToNext()) {
+                        val docId = cursor.getString(idColumn)
+                        val name = cursor.getString(nameColumn)
+                        val mimeType = cursor.getString(mimeColumn) ?: ""
+                        val lastModified = cursor.getLong(modifiedColumn)
+                        val size = cursor.getLong(sizeColumn)
+
+                        // Filter for text files (.txt, .md, text/*)
+                        if (name.endsWith(".txt", ignoreCase = true) ||
+                            name.endsWith(".md", ignoreCase = true) ||
+                            mimeType.startsWith("text/")) {
+
+                            val fileUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, docId)
+                            files.add(FolderFile(fileUri, name, lastModified, size))
+                        }
+                    }
+                }
+
+                _folderFiles.value = files.sortedByDescending { it.lastModified }
+            } catch (e: Exception) {
+                // Handle error - folder might no longer be accessible
+                _folderFiles.value = emptyList()
+            }
+        }
+    }
+
+    fun openFileFromFolder(file: FolderFile) {
+        openFile(file.uri)
+        hideNotesExplorer()
     }
 
     // Preferences
