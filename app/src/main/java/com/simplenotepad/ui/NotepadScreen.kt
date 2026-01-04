@@ -9,14 +9,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material3.Scaffold
@@ -27,13 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.simplenotepad.ui.components.AboutDialog
 import com.simplenotepad.ui.components.CloseTabDialog
 import com.simplenotepad.ui.components.FindReplaceBar
 import com.simplenotepad.ui.components.FontDialog
 import com.simplenotepad.ui.components.GoToLineDialog
+import com.simplenotepad.ui.components.MainMenuBottomSheet
 import com.simplenotepad.ui.components.MarkdownEditor
 import com.simplenotepad.ui.components.NotesExplorer
 import com.simplenotepad.ui.components.RecentFilesDialog
@@ -60,9 +61,10 @@ fun NotepadScreen(
     )
 
     var showThemeDialog by remember { mutableStateOf(false) }
-    var pendingSaveAsUri by remember { mutableStateOf<Uri?>(null) }
+    var showMainMenu by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
     // Share function
     fun shareNote() {
@@ -72,6 +74,31 @@ fun NotepadScreen(
             putExtra(Intent.EXTRA_TEXT, editorState.textFieldValue.text)
         }
         context.startActivity(Intent.createChooser(shareIntent, "Share Note"))
+    }
+
+    // Clipboard functions
+    fun cutText() {
+        val selection = editorState.textFieldValue.selection
+        if (!selection.collapsed) {
+            clipboardManager.setText(AnnotatedString(editorState.textFieldValue.text.substring(selection.min, selection.max)))
+            val newText = editorState.textFieldValue.text.removeRange(selection.min, selection.max)
+            viewModel.onTextChange(TextFieldValue(newText, TextRange(selection.min)))
+        }
+    }
+
+    fun copyText() {
+        val selection = editorState.textFieldValue.selection
+        if (!selection.collapsed) {
+            clipboardManager.setText(AnnotatedString(editorState.textFieldValue.text.substring(selection.min, selection.max)))
+        }
+    }
+
+    fun pasteText() {
+        clipboardManager.getText()?.let { paste ->
+            val selection = editorState.textFieldValue.selection
+            val newText = editorState.textFieldValue.text.replaceRange(selection.min, selection.max, paste.text)
+            viewModel.onTextChange(TextFieldValue(newText, TextRange(selection.min + paste.text.length)))
+        }
     }
 
     // File picker launchers
@@ -120,67 +147,26 @@ fun NotepadScreen(
     Scaffold(
         topBar = {
             TopMenuBar(
-                textFieldValue = editorState.textFieldValue,
                 canUndo = viewModel.canUndo(),
                 canRedo = viewModel.canRedo(),
-                wordWrap = preferences.wordWrap,
-                showStatusBar = preferences.showStatusBar,
-                autoSave = preferences.autoSave,
-                formattedView = preferences.formattedView,
-                onNewFile = { viewModel.newFile() },
-                onOpenFile = { openFileLauncher.launch(arrayOf("text/plain", "text/markdown", "*/*")) },
-                onSave = {
-                    if (editorState.fileUri != null) {
-                        viewModel.saveFile()
-                    } else {
-                        saveFileLauncher.launch(editorState.fileName + ".txt")
-                    }
-                },
-                onSaveAs = { saveFileLauncher.launch(editorState.fileName + ".txt") },
-                onSaveAsMarkdown = {
-                    val baseName = editorState.fileName.removeSuffix(".txt").removeSuffix(".md")
-                    saveMarkdownLauncher.launch("$baseName.md")
-                },
-                onShowRecentFiles = { viewModel.showRecentFiles() },
+                onShowMenu = { showMainMenu = true },
                 onUndo = { viewModel.undo() },
                 onRedo = { viewModel.redo() },
-                onTextChange = { viewModel.onTextChange(it) },
-                onSelectAll = { viewModel.selectAll() },
-                onFind = { viewModel.showFind() },
-                onFindReplace = { viewModel.showFindReplace() },
-                onGoTo = { viewModel.showGoToDialog() },
-                onInsertDateTime = { viewModel.insertDateTime() },
-                onZoomIn = { viewModel.zoomIn() },
-                onZoomOut = { viewModel.zoomOut() },
-                onResetZoom = { viewModel.resetZoom() },
-                onToggleWordWrap = { viewModel.setWordWrap(!preferences.wordWrap) },
-                onToggleStatusBar = { viewModel.setShowStatusBar(!preferences.showStatusBar) },
-                onToggleAutoSave = { viewModel.setAutoSave(!preferences.autoSave) },
-                onToggleFormattedView = { viewModel.toggleFormattedView() },
-                onShowFontDialog = { viewModel.showFontDialog() },
-                onShowThemeDialog = { showThemeDialog = true },
-                onShowAbout = { viewModel.showAboutDialog() },
-                onFormatBold = { viewModel.formatBold() },
-                onFormatItalic = { viewModel.formatItalic() },
-                onFormatStrikethrough = { viewModel.formatStrikethrough() },
-                onFormatInlineCode = { viewModel.formatInlineCode() },
-                onFormatCodeBlock = { viewModel.formatCodeBlock() },
-                onFormatHeader = { level -> viewModel.formatHeader(level) },
-                onFormatBulletList = { viewModel.formatBulletList() },
-                onFormatNumberedList = { viewModel.formatNumberedList() },
-                onFormatBlockquote = { viewModel.formatBlockquote() },
-                onFormatLink = { viewModel.formatLink() },
-                onFormatImage = { viewModel.formatImage() },
-                onFormatHorizontalRule = { viewModel.formatHorizontalRule() },
-                onShowNotesExplorer = { viewModel.showNotesExplorer() },
-                onShare = { shareNote() },
                 onQuickSave = {
                     if (editorState.fileUri != null) {
                         viewModel.saveFile()
                     } else {
                         saveFileLauncher.launch(editorState.fileName + ".txt")
                     }
-                }
+                },
+                onFormatBold = { viewModel.formatBold() },
+                onFormatItalic = { viewModel.formatItalic() },
+                onFormatStrikethrough = { viewModel.formatStrikethrough() },
+                onFormatInlineCode = { viewModel.formatInlineCode() },
+                onFormatHeader = { level -> viewModel.formatHeader(level) },
+                onFormatBulletList = { viewModel.formatBulletList() },
+                onFormatNumberedList = { viewModel.formatNumberedList() },
+                onFormatLink = { viewModel.formatLink() }
             )
         },
         bottomBar = {
@@ -260,6 +246,59 @@ fun NotepadScreen(
         }
     }
 
+    // Main Menu Bottom Sheet
+    if (showMainMenu) {
+        MainMenuBottomSheet(
+            onDismiss = { showMainMenu = false },
+            // File operations
+            onNewFile = { viewModel.newFile() },
+            onOpenFile = { openFileLauncher.launch(arrayOf("text/plain", "text/markdown", "*/*")) },
+            onSave = {
+                if (editorState.fileUri != null) {
+                    viewModel.saveFile()
+                } else {
+                    saveFileLauncher.launch(editorState.fileName + ".txt")
+                }
+            },
+            onSaveAs = { saveFileLauncher.launch(editorState.fileName + ".txt") },
+            onSaveAsMarkdown = {
+                val baseName = editorState.fileName.removeSuffix(".txt").removeSuffix(".md")
+                saveMarkdownLauncher.launch("$baseName.md")
+            },
+            onShowRecentFiles = { viewModel.showRecentFiles() },
+            onShowNotesExplorer = { viewModel.showNotesExplorer() },
+            onShare = { shareNote() },
+            // Edit operations
+            canUndo = viewModel.canUndo(),
+            canRedo = viewModel.canRedo(),
+            onUndo = { viewModel.undo() },
+            onRedo = { viewModel.redo() },
+            onCut = { cutText() },
+            onCopy = { copyText() },
+            onPaste = { pasteText() },
+            onSelectAll = { viewModel.selectAll() },
+            onFind = { viewModel.showFind() },
+            onFindReplace = { viewModel.showFindReplace() },
+            onGoToLine = { viewModel.showGoToDialog() },
+            onInsertDateTime = { viewModel.insertDateTime() },
+            // View options
+            wordWrap = preferences.wordWrap,
+            showStatusBar = preferences.showStatusBar,
+            autoSave = preferences.autoSave,
+            formattedView = preferences.formattedView,
+            onToggleWordWrap = { viewModel.setWordWrap(!preferences.wordWrap) },
+            onToggleStatusBar = { viewModel.setShowStatusBar(!preferences.showStatusBar) },
+            onToggleAutoSave = { viewModel.setAutoSave(!preferences.autoSave) },
+            onToggleFormattedView = { viewModel.toggleFormattedView() },
+            onZoomIn = { viewModel.zoomIn() },
+            onZoomOut = { viewModel.zoomOut() },
+            onResetZoom = { viewModel.resetZoom() },
+            onShowFontDialog = { viewModel.showFontDialog() },
+            onShowThemeDialog = { showThemeDialog = true },
+            onShowAbout = { viewModel.showAboutDialog() }
+        )
+    }
+
     // Dialogs
     if (uiState.showGoToDialog) {
         GoToLineDialog(
@@ -333,7 +372,6 @@ fun NotepadScreen(
                     viewModel.confirmCloseTab()
                 } else {
                     // Need to save as first - for now just close without saving
-                    // TODO: Implement save-as flow for unsaved tabs
                     viewModel.confirmCloseTab()
                 }
             },
