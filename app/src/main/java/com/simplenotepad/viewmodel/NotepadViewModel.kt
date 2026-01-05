@@ -65,7 +65,7 @@ data class UiState(
     val showUnsavedDialog: Boolean = false,
     val showCloseTabDialog: Boolean = false,
     val showRecentFiles: Boolean = false,
-    val showNotesExplorer: Boolean = false,
+    val showNotesExplorer: Boolean = true,
     val pendingAction: PendingAction? = null,
     val pendingCloseTabId: String? = null
 )

@@ -2,12 +2,14 @@
 
 ## Building
 
-**Do NOT attempt local builds** - JAVA_HOME is not configured in this environment.
+**Local builds are not possible** - The user cannot build locally and exclusively uses GitHub Actions.
 
 **Use GitHub Actions for all builds:**
 1. Commit and push changes to GitHub
 2. GitHub Actions will automatically build the APK
 3. Check build status at: https://github.com/valentinyeo/android-notepad/actions
+
+Do not attempt to run `gradlew` or any build commands locally.
 
 ## Project Info
 - Package: `com.simplenotepad`

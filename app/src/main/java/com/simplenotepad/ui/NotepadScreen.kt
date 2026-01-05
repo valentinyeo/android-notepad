@@ -33,6 +33,7 @@ import com.simplenotepad.ui.components.AboutDialog
 import com.simplenotepad.ui.components.CloseTabDialog
 import com.simplenotepad.ui.components.FindReplaceBar
 import com.simplenotepad.ui.components.FontDialog
+import com.simplenotepad.ui.components.FormattingToolbar
 import com.simplenotepad.ui.components.GoToLineDialog
 import com.simplenotepad.ui.components.MainMenuBottomSheet
 import com.simplenotepad.ui.components.MarkdownEditor
@@ -147,6 +148,7 @@ fun NotepadScreen(
     Scaffold(
         topBar = {
             TopMenuBar(
+                title = editorState.fileName,
                 canUndo = viewModel.canUndo(),
                 canRedo = viewModel.canRedo(),
                 onShowMenu = { showMainMenu = true },
@@ -158,15 +160,7 @@ fun NotepadScreen(
                     } else {
                         saveFileLauncher.launch(editorState.fileName + ".txt")
                     }
-                },
-                onFormatBold = { viewModel.formatBold() },
-                onFormatItalic = { viewModel.formatItalic() },
-                onFormatStrikethrough = { viewModel.formatStrikethrough() },
-                onFormatInlineCode = { viewModel.formatInlineCode() },
-                onFormatHeader = { level -> viewModel.formatHeader(level) },
-                onFormatBulletList = { viewModel.formatBulletList() },
-                onFormatNumberedList = { viewModel.formatNumberedList() },
-                onFormatLink = { viewModel.formatLink() }
+                }
             )
         },
         bottomBar = {
@@ -256,6 +250,18 @@ fun NotepadScreen(
                     onNewTab = { viewModel.addTab() }
                 )
             }
+
+            // Formatting toolbar at bottom
+            FormattingToolbar(
+                onFormatBold = { viewModel.formatBold() },
+                onFormatItalic = { viewModel.formatItalic() },
+                onFormatStrikethrough = { viewModel.formatStrikethrough() },
+                onFormatInlineCode = { viewModel.formatInlineCode() },
+                onFormatHeader = { level -> viewModel.formatHeader(level) },
+                onFormatBulletList = { viewModel.formatBulletList() },
+                onFormatNumberedList = { viewModel.formatNumberedList() },
+                onFormatLink = { viewModel.formatLink() }
+            )
         }
     }
 
