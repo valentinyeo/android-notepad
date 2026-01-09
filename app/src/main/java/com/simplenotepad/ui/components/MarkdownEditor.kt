@@ -38,8 +38,8 @@ fun MarkdownEditor(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // Calculate approximate line height in pixels
-    val lineHeightPx = with(density) { (fontSize.value * 1.5f).dp.toPx() }
+    // Calculate line height in pixels (fontSize is in sp, multiply by ~1.4 for line height)
+    val lineHeightPx = with(density) { fontSize.toPx() * 1.4f }
 
     // Auto-scroll to keep cursor visible when text changes
     LaunchedEffect(value.selection.end, value.text.length) {
@@ -48,20 +48,24 @@ fun MarkdownEditor(
         val lineNumber = textBeforeCursor.count { it == '\n' }
 
         // Estimate cursor Y position (line number * line height + padding)
-        val cursorY = (lineNumber * lineHeightPx + 12 * density.density).toInt()
+        val paddingPx = with(density) { 12.dp.toPx() }
+        val cursorY = (lineNumber * lineHeightPx + paddingPx).toInt()
 
         // Get visible area
         val viewportHeight = scrollState.viewportSize
         val currentScroll = scrollState.value
 
-        // Scroll if cursor is below visible area (with some margin)
-        val bottomMargin = (lineHeightPx * 2).toInt()
-        if (cursorY > currentScroll + viewportHeight - bottomMargin) {
-            scrollState.animateScrollTo(cursorY - viewportHeight + bottomMargin)
-        }
-        // Scroll if cursor is above visible area
-        else if (cursorY < currentScroll + lineHeightPx) {
-            scrollState.animateScrollTo(maxOf(0, cursorY - lineHeightPx.toInt()))
+        // Only scroll if viewport is initialized
+        if (viewportHeight > 0) {
+            // Scroll if cursor is below visible area (with margin for 3 lines)
+            val bottomMargin = (lineHeightPx * 3).toInt()
+            if (cursorY > currentScroll + viewportHeight - bottomMargin) {
+                scrollState.animateScrollTo(maxOf(0, cursorY - viewportHeight + bottomMargin))
+            }
+            // Scroll if cursor is above visible area
+            else if (cursorY < currentScroll + lineHeightPx) {
+                scrollState.animateScrollTo(maxOf(0, cursorY - lineHeightPx.toInt()))
+            }
         }
     }
 
