@@ -77,6 +77,25 @@ jobs:
           name: app-release
           path: app/build/outputs/apk/release/*.apk
 
+      - name: Rename APK for release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/notepad.apk
+
+      - name: Update latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete existing latest release if it exists
+          gh release delete latest --yes || true
+          # Create new latest release with APK
+          gh release create latest \
+            --title "Latest Build" \
+            --notes "Automatically updated on each push to master" \
+            --prerelease \
+            app/build/outputs/apk/debug/notepad.apk
+
       - name: Send Telegram notification
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         env:
@@ -85,11 +104,12 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          APK_URL="https://github.com/${REPO}/releases/download/latest/notepad.apk"
           TEXT="📦 <b>Notepad APK Built</b>
 
           ${COMMIT_MSG}
 
-          <a href=\"https://nightly.link/${REPO}/workflows/build/master/app-debug.zip\">⬇️ Download APK</a>"
+          <a href=\"${APK_URL}\">⬇️ Download APK</a>"
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d parse_mode="HTML" \
