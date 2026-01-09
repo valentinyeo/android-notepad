@@ -260,7 +260,9 @@ fun NotepadScreen(
                 onFormatHeader = { level -> viewModel.formatHeader(level) },
                 onFormatBulletList = { viewModel.formatBulletList() },
                 onFormatNumberedList = { viewModel.formatNumberedList() },
-                onFormatLink = { viewModel.formatLink() }
+                onFormatLink = { viewModel.formatLink() },
+                onSelectAll = { viewModel.selectAll() },
+                onCopy = { copyText() }
             )
         }
     }

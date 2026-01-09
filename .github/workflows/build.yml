@@ -26,10 +26,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup signing keystore
+        id: keystore
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > app/keystore.jks
             echo "Using keystore from secret"
+            echo "generated=false" >> $GITHUB_OUTPUT
           else
             keytool -genkey -v \
               -keystore app/keystore.jks \
@@ -40,10 +42,22 @@ jobs:
               -storepass notepad123 \
               -keypass notepad123 \
               -dname "CN=Notepad, OU=Notepad, O=Notepad, L=Unknown, ST=Unknown, C=US"
-            echo "Generated new keystore"
+            echo "Generated new keystore - save as secret for consistent signing!"
+            echo "generated=true" >> $GITHUB_OUTPUT
+            echo "KEYSTORE_VALUE=$(base64 -w 0 app/keystore.jks)" >> $GITHUB_OUTPUT
           fi
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Save keystore for secret setup
+        if: steps.keystore.outputs.generated == 'true'
+        run: |
+          echo "=========================================="
+          echo "IMPORTANT: Save this as KEYSTORE_BASE64 secret"
+          echo "to enable consistent APK signing:"
+          echo "=========================================="
+          echo "${{ steps.keystore.outputs.KEYSTORE_VALUE }}"
+          echo "=========================================="
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
@@ -62,3 +76,16 @@ jobs:
         with:
           name: app-release
           path: app/build/outputs/apk/release/*.apk
+
+      - name: Send Telegram notification
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d parse_mode="HTML" \
+            -d text="📦 <b>Notepad APK Built</b>
+
+$COMMIT_MSG
+
+<a href=\"https://nightly.link/${{ github.repository }}/workflows/build/master/app-debug.zip\">⬇️ Download APK</a>"

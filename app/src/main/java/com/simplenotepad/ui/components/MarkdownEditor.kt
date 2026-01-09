@@ -9,7 +9,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.AnnotatedString
@@ -34,6 +36,35 @@ fun MarkdownEditor(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+
+    // Calculate approximate line height in pixels
+    val lineHeightPx = with(density) { (fontSize.value * 1.5f).dp.toPx() }
+
+    // Auto-scroll to keep cursor visible when text changes
+    LaunchedEffect(value.selection.end, value.text.length) {
+        val cursorPosition = value.selection.end
+        val textBeforeCursor = value.text.take(cursorPosition)
+        val lineNumber = textBeforeCursor.count { it == '\n' }
+
+        // Estimate cursor Y position (line number * line height + padding)
+        val cursorY = (lineNumber * lineHeightPx + 12 * density.density).toInt()
+
+        // Get visible area
+        val viewportHeight = scrollState.viewportSize
+        val currentScroll = scrollState.value
+
+        // Scroll if cursor is below visible area (with some margin)
+        val bottomMargin = (lineHeightPx * 2).toInt()
+        if (cursorY > currentScroll + viewportHeight - bottomMargin) {
+            scrollState.animateScrollTo(cursorY - viewportHeight + bottomMargin)
+        }
+        // Scroll if cursor is above visible area
+        else if (cursorY < currentScroll + lineHeightPx) {
+            scrollState.animateScrollTo(maxOf(0, cursorY - lineHeightPx.toInt()))
+        }
+    }
+
     val textColor = MaterialTheme.colorScheme.onBackground
     val headerColor = textColor
     val codeColor = MaterialTheme.colorScheme.tertiary

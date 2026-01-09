@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -41,6 +43,8 @@ fun FormattingToolbar(
     onFormatBulletList: () -> Unit,
     onFormatNumberedList: () -> Unit,
     onFormatLink: () -> Unit,
+    onSelectAll: () -> Unit,
+    onCopy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showHeaderMenu by remember { mutableStateOf(false) }
@@ -184,6 +188,30 @@ fun FormattingToolbar(
             Icon(
                 Icons.Default.Code,
                 contentDescription = "Code",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // Select All
+        IconButton(
+            onClick = onSelectAll,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                Icons.Default.SelectAll,
+                contentDescription = "Select All",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // Copy
+        IconButton(
+            onClick = onCopy,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                Icons.Default.ContentCopy,
+                contentDescription = "Copy",
                 modifier = Modifier.size(20.dp)
             )
         }
