@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import com.simplenotepad.ui.components.AboutDialog
+import com.simplenotepad.ui.components.ChangelogDialog
 import com.simplenotepad.ui.components.CloseTabDialog
 import com.simplenotepad.ui.components.FindReplaceBar
 import com.simplenotepad.ui.components.FontDialog
@@ -344,7 +345,14 @@ fun NotepadScreen(
     }
 
     if (uiState.showAboutDialog) {
-        AboutDialog(onDismiss = { viewModel.hideAboutDialog() })
+        AboutDialog(
+            onDismiss = { viewModel.hideAboutDialog() },
+            onShowChangelog = { viewModel.showChangelogDialog() }
+        )
+    }
+
+    if (uiState.showChangelogDialog) {
+        ChangelogDialog(onDismiss = { viewModel.hideChangelogDialog() })
     }
 
     if (uiState.showUnsavedDialog) {

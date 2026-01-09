@@ -62,6 +62,7 @@ data class UiState(
     val showGoToDialog: Boolean = false,
     val showFontDialog: Boolean = false,
     val showAboutDialog: Boolean = false,
+    val showChangelogDialog: Boolean = false,
     val showUnsavedDialog: Boolean = false,
     val showCloseTabDialog: Boolean = false,
     val showRecentFiles: Boolean = false,
@@ -903,6 +904,14 @@ class NotepadViewModel(application: Application) : AndroidViewModel(application)
 
     fun hideAboutDialog() {
         _uiState.value = _uiState.value.copy(showAboutDialog = false)
+    }
+
+    fun showChangelogDialog() {
+        _uiState.value = _uiState.value.copy(showChangelogDialog = true, showAboutDialog = false)
+    }
+
+    fun hideChangelogDialog() {
+        _uiState.value = _uiState.value.copy(showChangelogDialog = false)
     }
 
     fun dismissUnsavedDialog() {

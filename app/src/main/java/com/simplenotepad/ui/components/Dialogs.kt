@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -23,9 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.simplenotepad.BuildConfig
 
 @Composable
 fun GoToLineDialog(
@@ -119,14 +124,18 @@ fun FontDialog(
 
 @Composable
 fun AboutDialog(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onShowChangelog: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Notepad") },
         text = {
             Column {
-                Text("Version 1.0.0")
+                Text(
+                    "Version ${BuildConfig.VERSION_NAME}",
+                    fontWeight = FontWeight.Medium
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "A simple, lightweight text editor for Android.",
@@ -143,6 +152,75 @@ fun AboutDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onShowChangelog) {
+                Text("Changelog")
+            }
+        }
+    )
+}
+
+@Composable
+fun ChangelogDialog(
+    onDismiss: () -> Unit
+) {
+    val changelog = listOf(
+        "1.0.x" to listOf(
+            "Add Select All and Copy icons to toolbar",
+            "Auto-scroll to keep cursor visible while typing",
+            "Telegram notifications with direct APK download",
+            "Consistent APK signing for updates without uninstall",
+            "Fix font size dialog to show actual displayed size",
+            "Version number in About dialog",
+            "This changelog view"
+        ),
+        "1.0.0" to listOf(
+            "Initial release",
+            "Tabbed interface for multiple files",
+            "Markdown formatting toolbar",
+            "Find and Replace",
+            "Auto-save",
+            "Theme support (Light/Dark/System)",
+            "Bottom sheet menus (Android style)",
+            "Formatted/Markdown view toggle",
+            "Notes explorer (All Notes view)"
+        )
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Changelog") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                changelog.forEachIndexed { index, (version, changes) ->
+                    if (index > 0) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    Text(
+                        "Version $version",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    changes.forEach { change ->
+                        Text(
+                            "• $change",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
             }
         }
     )

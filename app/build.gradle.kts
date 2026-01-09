@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Version from environment or default
+val buildNumber = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 1
+val versionMajor = 1
+val versionMinor = 0
+val appVersionCode = buildNumber
+val appVersionName = "$versionMajor.$versionMinor.$buildNumber"
+
 android {
     namespace = "com.simplenotepad"
     compileSdk = 34
@@ -11,8 +18,8 @@ android {
         applicationId = "com.simplenotepad"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         vectorDrawables {
             useSupportLibrary = true
@@ -64,6 +71,14 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "notepad-${appVersionName}.apk"
+        }
     }
 
     composeOptions {
