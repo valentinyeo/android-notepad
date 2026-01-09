@@ -334,8 +334,11 @@ fun NotepadScreen(
 
     if (uiState.showFontDialog) {
         FontDialog(
-            currentSize = preferences.fontSize,
-            onFontSizeChange = { viewModel.setFontSize(it) },
+            currentSize = preferences.fontSize * preferences.zoomLevel,
+            onFontSizeChange = {
+                viewModel.setFontSize(it)
+                viewModel.resetZoom() // Reset zoom so displayed size matches slider
+            },
             onDismiss = { viewModel.hideFontDialog() }
         )
     }
