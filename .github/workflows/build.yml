@@ -79,13 +79,18 @@ jobs:
 
       - name: Send Telegram notification
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPO: ${{ github.repository }}
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          TEXT="📦 <b>Notepad APK Built</b>
+
+          ${COMMIT_MSG}
+
+          <a href=\"https://nightly.link/${REPO}/workflows/build/master/app-debug.zip\">⬇️ Download APK</a>"
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d parse_mode="HTML" \
-            -d text="📦 <b>Notepad APK Built</b>
-
-$COMMIT_MSG
-
-<a href=\"https://nightly.link/${{ github.repository }}/workflows/build/master/app-debug.zip\">⬇️ Download APK</a>"
+            -d text="${TEXT}"
